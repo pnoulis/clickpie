@@ -7,11 +7,6 @@ app_vversion:=v$(app_version)
 app_distname:=$(app_name)-$(app_vversion)
 
 SHELL:=/usr/bin/bash
-# errexit -> An exception halts recipe execution
-# pipefail -> The whole pipeline fails when any of its parts exits with a
-# non-zero status code.
-# -o nounset -> Treat unset variables and parameters as an error
-.SHELLFLAGS:=-o errexit -o pipefail -c -o nounset
 .DEFAULT_GOAL:=all
 # Backtrack changes in case of an exception
 .DELETE_ON_ERROR:
@@ -191,6 +186,17 @@ clean:
 	-rm -rdf $(app_name)-v*
 	-rm -rdf *.log
 	-rm -rdf $(dotenvfile)
+
+
+cleandocker: cleandockerc cleandockerimg
+
+cleandockerimg:
+
+cleandockerc:
+	@containers=$$(docker ps --all | grep -i $(app_name) | awk '{ print $$1 }')
+	if [[ -n "$$containers" ]]; then
+	docker rm $$containers
+	fi
 
 help:
 	@cat ./Makefile | grep -i --color=auto 'phony' | cut -d ' ' -f2- | tail --lines=+3
