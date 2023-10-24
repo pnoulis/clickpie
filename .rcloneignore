@@ -1,0 +1,9 @@
+/software/clickpie-server
+/scripts/**
+/config/**
+/tmp/**
+/tools/**
+/\.git/**
+/\.gitmodules
+/\.rcloneignore
+/\.gitignore
