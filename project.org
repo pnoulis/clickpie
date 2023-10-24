@@ -1,0 +1,21 @@
+* About
+This file acts as a project management tool and notepad for the clickpie devops
+repository.
+
+* resources
+** Clickup homepage
+https://clickup.com
+
+** Clickup API documentation
+https://clickup.com/api/
+
+* Using the clickup API
+clickup exposes its services through a REST API. One may use CURL to initiate a
+one-off requests to clickup.
+
+For more complex integrations such as Webhooks, a bi-directional communication
+channel is required. Such a channel is made possible only by exposing an API to
+clickup through a server. If clickup is configured for bi-directional
+communication with a REST API it will initiate a request each time an event
+occurs for which a handler has been defined. The server then is responsible for
+performing any side effects using clickup's REST API.
