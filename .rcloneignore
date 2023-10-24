@@ -1,4 +1,4 @@
-/software/clickpie-server
+/software/**
 /scripts/**
 /config/**
 /tmp/**
