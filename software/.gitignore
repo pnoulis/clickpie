@@ -1,0 +1,36 @@
+
+# ------- Transient directories
+build/
+dist/
+var/
+coverage/
+tmp/
+run/
+log/
+
+# ------- Transient files
+*.log
+*.logs
+
+# ------- Environment variables
+.env
+.env.*.local
+.env.local
+
+# emacs
+\#*\#
+*~
+.pdf-view-restore
+
+# vim
+:w
+
+# vscode
+.vscode
+
+# intellij
+.idea
+
+# Node
+node_modules/
+package-lock.json

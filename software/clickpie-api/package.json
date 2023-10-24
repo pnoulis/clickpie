@@ -1,0 +1,21 @@
+{
+  "name": "clickpie-api",
+  "private": true,
+  "type": "module",
+  "description": "API for the clickup project management application software",
+  "homepage": "https://github.com/pnoulis/clickpie-software/clickpie-api#readme",
+  "bugs": "https://github.com/pnoulis/clickpie-software/issues",
+  "author": "pavlos noulis <pavlos.noulis@gmail.com> (https://github.com/pnoulis)",
+  "licence": "UNLICENSED",
+  "scripts": {
+    "dev": "make dev"
+  },
+  "exports": {
+    ".": {
+      "import": "./dist/api.js"
+    },
+    "./src/*": {
+      "import": "./src/*"
+    }
+  }
+}
