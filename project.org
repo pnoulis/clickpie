@@ -11,7 +11,7 @@ https://clickup.com/api/
 
 * Using the clickup API
 clickup exposes its services through a REST API. One may use CURL to initiate a
-one-off requests to clickup.
+one-off request to clickup.
 
 For more complex integrations such as Webhooks, a bi-directional communication
 channel is required. Such a channel is made possible only by exposing an API to
@@ -19,3 +19,14 @@ clickup through a server. If clickup is configured for bi-directional
 communication with a REST API it will initiate a request each time an event
 occurs for which a handler has been defined. The server then is responsible for
 performing any side effects using clickup's REST API.
+
+* Clickup API structure
+prefix=https://api.clickup.com/api/v2
+
+team=$prefix/team
+
+
+
+* Tasks Board
+** TODO Communicate with the clickup api
+** TODO include Authorization header token to an API Request

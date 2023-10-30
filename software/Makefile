@@ -50,6 +50,7 @@ rm:=/usr/bin/rm
 chmod:=/usr/bin/chmod
 mpp:=/usr/bin/m4
 node:=$(NVM_BIN)/node
+bash:=/usr/bin/env bash
 compiler:=
 tester:=
 linter:=
@@ -59,7 +60,7 @@ dotenv:=/home/pnoul/bin/dotenv
 dotenvdirs:=$(confdir)/env $(appdir)
 dotenvflags:=--mode=$(MODE)
 dotenvfile:=.env
-loadenv:=source $(dotenvfile)
+loadenv:=set -a; source $(dotenvfile)
 
 # Metadata
 timestamp:=$(shell date +%s)
@@ -96,7 +97,10 @@ distribution:= # Target defined
 all: build
 
 # Run
-run:
+run: file?=./scripts/example-webhook.sh
+run: env
+	$(loadenv)
+	$(bash) $(file) $(args)
 
 # Scratch
 scratch:

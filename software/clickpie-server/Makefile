@@ -32,6 +32,10 @@ MODE?=production
 endif
 
 # App directories
+prjdir:=../../
+prjdir_abs:=$(realpath $(prjdir))
+softdir:=../
+softdir_abs:=$(realpath $(softdir))
 appdir:=.
 appdir_abs:=$(realpath $(appdir))
 srcdir:=$(appdir)/src
@@ -53,10 +57,10 @@ linter:=
 formatter:=
 pretty_output:=
 dotenv:=/home/pnoul/bin/dotenv
-dotenvdirs:=$(confdir)/env $(appdir)
+dotenvdirs:=$(softdir)/config/env $(confdir)/env $(appdir)
 dotenvflags:=--mode=$(MODE)
 dotenvfile:=.env
-loadenv:=source $(dotenvfile)
+loadenv:=set -a; source $(dotenvfile)
 
 # Metadata
 timestamp:=$(shell date +%s)
@@ -174,7 +178,7 @@ mkdistdir:
 	readmefile
 	EOF
 
-env: $(dotenvdirs)
+env:
 	$(dotenv) $(dotenvflags) $(dotenvdirs) | $(sort) > $(dotenvfile)
 
 env-dry:
@@ -188,6 +192,11 @@ clean:
 	-rm -rdf $(dotenvfile)
 
 
+distclean: clean
+	-rm -rdf node_modules
+	-rm -rdf package-lock.json
+
+
 cleandocker: cleandockerc cleandockerimg
 
 cleandockerimg:
@@ -197,6 +206,19 @@ cleandockerc:
 	if [[ -n "$$containers" ]]; then
 	docker rm $$containers
 	fi
+
+test-makefile:
+	@echo $(prjdir) $(prjdir_abs)
+	echo $(softdir) $(softdir_abs)
+
+
+
+
+
+
+
+
+
 
 help:
 	@cat ./Makefile | grep -i --color=auto 'phony' | cut -d ' ' -f2- | tail --lines=+3
@@ -220,3 +242,8 @@ help:
 # Cleaning
 .PHONY: clean /* Remove files created by make build, install, package, dist... */
 .PHONY: distclean /* Remove files created by configure */
+.PHONY: cleandocker /* Removes docker containers and images */
+.PHONY: cleandockerc /* Remove docker containers */
+.PHONY: cleandockerimg /* Removes docker images */
+# Miscellaenous
+.PHONY: test-makefile

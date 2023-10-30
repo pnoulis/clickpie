@@ -1,0 +1,3 @@
+* Resources
+** Official docs, Manuals and Specification
+[[https://clickup.com/api/][Clickup API - #getStarted]]

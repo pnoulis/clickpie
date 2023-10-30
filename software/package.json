@@ -4,5 +4,8 @@
   "description": "clickpie software suite",
   "author": "pavlos noulis <pavlos.noulis@gmail.com> (https://github.com/pnoulis)",
   "license": "UNLICENSED",
-  "workspaces": ["./clickpie-server", "./clickpie-api"]
+  "workspaces": [
+    "./clickpie-server",
+    "./clickpie-api"
+  ]
 }

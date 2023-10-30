@@ -12,9 +12,9 @@
   },
   "exports": {
     ".": {
-      "import": "./dist/api.js"
+      "import": "./src/api.js"
     },
-    "./src/*": {
+    "./*": {
       "import": "./src/*"
     }
   }

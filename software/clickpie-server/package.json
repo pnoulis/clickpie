@@ -12,10 +12,10 @@
   },
   "exports": {
     ".": {
-      "import": "./dist/server.js"
+      "import": "./src/server.js"
     }
   },
   "dependencies": {
-    "clickpie-api": "file:../api"
+    "koa": "2.14.2"
   }
 }
