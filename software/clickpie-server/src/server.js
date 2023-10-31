@@ -1,10 +1,13 @@
 import { default as Koa } from 'koa';
+import { koaBody } from 'koa-body';
 import process from 'node:process';
 import { api } from 'clickpie-api';
 
 const server = new Koa();
+server.use(koaBody());
 server.use(async function(ctx) {
-  ctx.body = 'Hello World!';
+  console.dir(ctx.request.body, { depth: null });
+  ctx.body = 'Hello World!\n';
 })
 
 const PORT = parseInt(process.env.PORT);

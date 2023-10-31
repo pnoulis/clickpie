@@ -61,6 +61,7 @@ dotenvdirs:=$(confdir)/env $(appdir)
 dotenvflags:=--mode=$(MODE)
 dotenvfile:=.env
 loadenv:=set -a; source $(dotenvfile)
+json2csv:=$(appdir)/scripts/json2csv.jq
 
 # Metadata
 timestamp:=$(shell date +%s)
@@ -94,13 +95,37 @@ dist_target:= # Target defined
 dist_basename:= # Target defined
 distribution:= # Target defined
 
+# Misc
+script_commons=$(appdir)/scripts/script-template.sh
+
 all: build
 
 # Run
-run: file?=./scripts/example-webhook.sh
+run: file?=./scripts/get-lists.sh
 run: env
 	$(loadenv)
-	$(bash) $(file) $(args)
+	$(bash) $(file) -d $(args)
+
+run-workspace: file?=./scripts/get-lists.sh
+run-workspace: env
+	$(loadenv)
+	WORKSPACE_ID=9015040672	\
+	$(bash) $(file) -d $(args)
+
+run-space: file?=./scripts/get-lists.sh
+run-space: env
+	$(loadenv)
+	WORKSPACE_ID=9015040672 \
+	SPACE_ID=90150088592 \
+	$(bash) $(file) -d $(args)
+
+run-folder: file?=./scripts/get-lists.sh
+run-folder: env
+	$(loadenv)
+	WORKSPACE_ID=9015040672 \
+	SPACE_ID=90150088592 \
+	FOLDER_ID=90150348005 \
+	$(bash) $(file) -d $(args)
 
 # Scratch
 scratch:
@@ -214,3 +239,5 @@ help:
 # Cleaning
 .PHONY: clean /* Remove files created by make build, install, package, dist... */
 .PHONY: distclean /* Remove files created by configure */
+# Misc
+.PHONY: run-workspace

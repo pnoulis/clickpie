@@ -2,35 +2,92 @@
 
 # Get WORKSPACES available to the $AUTHENTICATED_USER
 
-# Required parameters
-_USER_AUTH_TOKEN="${CLICKUP_AUTH_TOKEN:-}"
-_CLICKUP_API_PREFIX="${CLICKUP_API_PREFIX:-}"
-# Optional parameters
-_VERBOSE="${1:-false}"
+# Required parameters inherited from the parent process environment
+_SCRIPT_COMMONS="${script_commons:-}"
 
-if [ "${_USER_AUTH_TOKEN}" == "" ]; then
-  echo "Missing CLICKUP_AUTH_TOKEN"
-  exit 1
-elif [ "${_CLICKUP_API_PREFIX}" == "" ]; then
-  echo "Missing CLICKUP_API_PREFIX"
-  exit 1
-fi
+main() {
+  source $_SCRIPT_COMMONS
+  parse_args "$@"
+  set -- "${POSARGS[@]}"
+  debug_script_params
+  tempout=$(mktemp)
+  workspaces_url=${_CLICKUP_API_PREFIX}/team
 
-get_workspaces=${_CLICKUP_API_PREFIX}/team
-tempout=$(mktemp)
+  curl --request GET \
+       --silent \
+       --header "Authorization: ${_USER_AUTH_TOKEN}" \
+       $workspaces_url > $tempout
 
-# --request, the request METHOD
-# --include, include the http response HEADERS in the output
-curl --request GET \
-     --silent \
-     --header "Authorization: ${_USER_AUTH_TOKEN}" \
-     $get_workspaces \
-  > $tempout
+  case $_VERBOSE in
+    0)
+      # Show just ID's
+      case $_OUTPUT_FORMAT in
+        json)
+          jq '.teams[].id' $tempout | jq -s '.'
+          ;;
+        csv)
+          jq '.teams[] | { id: .id }' $tempout | jq -s '.' | jq -rf $_JSON2CSV
+          ;;
+        line)
+          jq -r '.teams[].id' $tempout
+          ;;
+        *)
+          rm $tempout
+          error "Unrecognized output format: $(quote $_OUTPUT_FORMAT)"
+          ;;
+      esac
+      ;;
+    1)
+      # Show ID's and Names
+      case $_OUTPUT_FORMAT in
+        json)
+          jq '.teams[] | { id: .id, name: .name }' $tempout | jq -s '.'
+        ;;
+        csv)
+          jq '.teams[] | { id: .id, name: .name }' $tempout | jq -s '.' | jq -rf $_JSON2CSV
+        ;;
+        line)
+          jq '.teams[] | { id: .id, name: .name }' $tempout | jq -s '.' | jq -rf $_JSON2CSV | tail --lines=+2 | sed 's/,/ /g'
+        ;;
+        *)
+          rm $tempout
+          error "Unrecognized output format: $(quote $_OUTPUT_FORMAT)"
+          ;;
+      esac
+      ;;
+    2) # Show ID's, Names, Permissions, ...
+      echo its 2
+      case $_OUTPUT_FORMAT in
+        json)
+        ;;
+        csv)
+        ;;
+        line)
+        ;;
+        *)
+          rm $tempout
+          error "Unrecognized output format: $(quote $_OUTPUT_FORMAT)"
+          ;;
+      esac
+      ;;
+    *)
+      # Dump response
+      case $_OUTPUT_FORMAT in
+        json)
+          cat $tempout | jq -r '.teams'
+        ;;
+        csv)
+        ;;
+        line)
+        ;;
+        *)
+          rm $tempout
+          error "Unrecognized output format: $(quote $_OUTPUT_FORMAT)"
+          ;;
+      esac
+      ;;
+  esac
+  rm $tempout
+}
 
-if [ "${_VERBOSE}" == 'false' ]; then
-  jq '.teams[] | { id: .id, name: .name }' $tempout | jq -s '.'
-else
-  jq '.' $tempout
-fi
-
-rm $tempout
+main "$@"

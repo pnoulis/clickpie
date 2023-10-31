@@ -26,7 +26,10 @@ prefix=https://api.clickup.com/api/v2
 team=$prefix/team
 
 
-
 * Tasks Board
-** TODO Communicate with the clickup api
-** TODO include Authorization header token to an API Request
+** DONE Communicate with the clickup api
+CLOSED: [2023-10-31 Tue 14:14]
+** DONE include Authorization header token to an API Request
+CLOSED: [2023-10-31 Tue 14:14]
+
+** TODO
