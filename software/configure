@@ -1,15 +1,29 @@
 #!/usr/bin/env bash
 
+CLICKUP_LOGIN='IE'
 
 main() {
-
+  parse_args "$@"
+  set -- "${POSARGS[@]}"
+  debug "Config: $(quote $CONFIG)"
+  debug "Clickup login: $(quote $CLICKUP_LOGIN)"
+  echo Configuring...
+  echo Decrypting .secrets
+  gpg --decrypt --quiet ../.secrets.gpg | grep -i $CLICKUP_LOGIN > .env.default.local
 }
 
 parse_args(){
   declare -ga POSARGS=()
   while (($# > 0)); do
     case "${1:-}" in
-      -C | --config)
+      --with-pn-clickup-login)
+        CLICKUP_LOGIN='PN'
+        ;;
+      --with-ie-clickup-login)
+        CLICKUP_LOGIN='IE'
+        ;;
+      -C | --config=* | --config*)
+        CONFIG="$(parse_param "$@")" || shift $?
         ;;
       -d | --debug)
         DEBUG=0

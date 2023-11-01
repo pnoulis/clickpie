@@ -1,3 +1,6 @@
 usr/
 assets/
 rclone.conf
+
+# Sensitive information
+.secrets
