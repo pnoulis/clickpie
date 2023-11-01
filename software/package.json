@@ -6,6 +6,8 @@
   "license": "UNLICENSED",
   "workspaces": [
     "./clickpie-server",
-    "./clickpie-api"
+    "./clickpie-api",
+    "./js_utils",
+    "./clickpie-commons"
   ]
 }

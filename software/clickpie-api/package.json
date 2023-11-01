@@ -15,7 +15,7 @@
       "import": "./src/api.js"
     },
     "./*": {
-      "import": "./src/*"
+      "import": "./src/*.js"
     }
   }
 }

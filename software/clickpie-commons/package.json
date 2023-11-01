@@ -1,0 +1,14 @@
+{
+  "name": "clickpie-commons",
+  "private": true,
+  "type": "module",
+  "description": "Shared modules for the clickup project management application software",
+  "homepage": "https://github.com/pnoulis/clickpie-software/clickpie-server#readme",
+  "bugs": "https://github.com/pnoulis/clickpie-software/issues",
+  "author": "pavlos noulis <pavlos.noulis@gmail.com> (https://github.com/pnoulis)",
+  "licence": "UNLICENSED",
+  "exports": {
+    ".": "./src/index.js",
+    "./*": "./src/*.js"
+  }
+}

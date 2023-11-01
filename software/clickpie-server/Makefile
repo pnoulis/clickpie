@@ -32,9 +32,9 @@ MODE?=production
 endif
 
 # App directories
-prjdir:=../../
+prjdir:=../..
 prjdir_abs:=$(realpath $(prjdir))
-softdir:=../
+softdir:=..
 softdir_abs:=$(realpath $(softdir))
 appdir:=.
 appdir_abs:=$(realpath $(appdir))
@@ -57,7 +57,7 @@ linter:=
 formatter:=
 pretty_output:=
 dotenv:=/home/pnoul/bin/dotenv
-dotenvdirs:=$(softdir)/config/env $(confdir)/env $(appdir)
+dotenvdirs:=$(softdir)/config/env $(softdir)/ $(confdir)/env $(appdir)
 dotenvflags:=--mode=$(MODE)
 dotenvfile:=.env
 loadenv:=set -a; source $(dotenvfile)
@@ -97,10 +97,15 @@ distribution:= # Target defined
 all: build
 
 # Run
-run:
+run: file?=$(srcdir)/env.js
+run: env
+	$(loadenv)
+	$(node) $(file)
 
 # Scratch
 scratch:
+	$(loadenv)
+	$(node) tmp/scratch.js
 
 # Build
 build:
@@ -108,7 +113,7 @@ build:
 # Develop
 dev: env
 	$(loadenv)
-	$(node) $(srcdir)/server.js
+	$(node) $(srcdir)/index.js
 
 # Release
 release: distribution:=$(appdir_abs)

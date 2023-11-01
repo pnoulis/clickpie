@@ -9,7 +9,7 @@ main() {
   debug "Clickup login: $(quote $CLICKUP_LOGIN)"
   echo Configuring...
   echo Decrypting .secrets
-  gpg --decrypt --quiet ../.secrets.gpg | grep -i $CLICKUP_LOGIN > .env.default.local
+  gpg --decrypt --quiet ../.secrets.gpg | grep -i $CLICKUP_LOGIN | sed "s/${CLICKUP_LOGIN}_//g" > .env.default
 }
 
 parse_args(){

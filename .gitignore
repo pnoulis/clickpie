@@ -4,3 +4,12 @@ rclone.conf
 
 # Sensitive information
 .secrets
+.env.default
+.env.development
+.env.production
+.env.staging
+.env.testing
+.env.dev
+.env.prod
+.env.stag
+.env.test

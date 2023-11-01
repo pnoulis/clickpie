@@ -1,20 +1,30 @@
-import { default as Koa } from 'koa';
-import { koaBody } from 'koa-body';
-import process from 'node:process';
-import { api } from 'clickpie-api';
+import { default as Koa } from "koa";
+import { koaBody } from "koa-body";
+import { router } from "./router.js";
 
-const server = new Koa();
-server.use(koaBody());
-server.use(async function(ctx) {
-  console.dir(ctx.request.body, { depth: null });
-  ctx.body = 'Hello World!\n';
-})
-
-const PORT = parseInt(process.env.PORT);
-if (!PORT) {
-  console.error(`Port '${process.env.PORT}' is not a valid PORT`);
-  process.exit(1);
+function Server({ port } = {}) {
+  this.port = parseInt(port);
 }
 
-server.listen(PORT);
-console.log(`Server listening on port: ${PORT}`);
+Server.prototype.start = async function () {
+  if (!this.port) {
+    throw new Error(`Port '${this.port}' is not a valid PORT`);
+  }
+  this.server = new Koa();
+
+  // Attaching middleware
+  this.server.use(async (ctx, next) => {
+    const start = Date.now();
+    await next();
+    const ms = Date.now() - start;
+    ctx.set("X-Response-Time", `${ms}ms`);
+  });
+  this.server.use(koaBody());
+  this.server.use(router.routes());
+
+  this.server.listen(this.port, () =>
+    log.info(`Server listening on port: ${this.port}`),
+  );
+};
+
+export { Server };
