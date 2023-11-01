@@ -1,0 +1,3 @@
+[submodule "software/js_utils"]
+	path = software/js_utils
+	url = git@github.com:pnoulis/js_utils.git
