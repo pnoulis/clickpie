@@ -39,8 +39,17 @@ class Graph {
   /* verteces: u, v, w */
   /* edges: e, f */
   /* source vertex in BFS: s */
-  constructor() {
+  constructor(verteces) {
+    verteces ||= [null];
     this.adjacencyList = new Map();
+
+    /* auto scaffolding */
+    this.root = verteces.at(0);
+    this.addVertex(this.root);
+    for (const vertex of verteces.slice(1)) {
+      this.addVertex(vertex);
+      this.addEdge(this.root, vertex);
+    }
   }
   addVertex(u) {
     this.adjacencyList.set(u, new Set());
@@ -89,6 +98,10 @@ class Graph {
       }
       cb(s, stop);
     }
+  }
+  /* For development purposes */
+  log() {
+    console.dir(this.adjacencyList, { depth: null });
   }
 }
 

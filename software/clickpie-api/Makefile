@@ -61,10 +61,10 @@ linter:=
 formatter:=
 pretty_output:=
 dotenv:=/home/pnoul/bin/dotenv
-dotenvdirs:=$(confdir)/env $(appdir)
+dotenvdirs:=$(softdir)/config/env $(softdir) $(confdir)/env $(appdir)
 dotenvflags:=--mode=$(MODE)
 dotenvfile:=.env
-loadenv:=source $(dotenvfile)
+loadenv:=set -a; source $(dotenvfile)
 
 # Metadata
 timestamp:=$(shell date +%s)
@@ -101,7 +101,10 @@ distribution:= # Target defined
 all: build
 
 # Run
-run:
+run: file?=tmp/scratch.js
+run: env
+	$(loadenv)
+	$(node) $(file) $(args)
 
 # Scratch
 scratch:

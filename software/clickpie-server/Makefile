@@ -56,7 +56,7 @@ linter:=
 formatter:=
 pretty_output:=
 dotenv:=/home/pnoul/bin/dotenv
-dotenvdirs:=$(softdir)/config/env $(softdir)/ $(confdir)/env $(appdir)
+dotenvdirs:=$(softdir)/config/env $(softdir) $(confdir)/env $(appdir)
 dotenvflags:=--mode=$(MODE)
 dotenvfile:=.env
 loadenv:=set -a; source $(dotenvfile)
