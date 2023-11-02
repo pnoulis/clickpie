@@ -32,12 +32,11 @@ MODE?=production
 endif
 
 # App directories
-prjdir:=../..
-prjdir_abs:=$(realpath $(prjdir))
-softdir:=..
-softdir_abs:=$(realpath $(softdir))
+projdir:=../..
+projdir_abs:=$(realpath -e $(projdir))
+softdir:=$(projdir)/software
 appdir:=.
-appdir_abs:=$(realpath $(appdir))
+appdir_abs:=$(realpath -e $(appdir))
 srcdir:=$(appdir)/src
 buildir:=$(appdir)/build
 confdir:=$(appdir)/config
@@ -213,7 +212,7 @@ cleandockerc:
 	fi
 
 test-makefile:
-	@echo $(prjdir) $(prjdir_abs)
+	@echo $(projdir) $(projdir_abs)
 	echo $(softdir) $(softdir_abs)
 
 

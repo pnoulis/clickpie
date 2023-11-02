@@ -37,11 +37,14 @@ MODE?=production
 endif
 
 # App directories
+projdir:=../..
+projdir_abs:=$(realpath -e $(projdir))
+softdir:=$(projdir)/software
 appdir:=.
-appdir_abs:=$(realpath $(appdir))
-srcdir:=$(appdir)/src
-buildir:=$(appdir)/build
-confdir:=$(appdir)/config
+appdir_abs:=$(realpath -e $(appdir))
+srcdir:=src
+buildir:=build
+confdir:=config
 
 # Tools
 install=/usr/bin/install
