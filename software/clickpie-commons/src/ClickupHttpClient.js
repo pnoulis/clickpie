@@ -1,4 +1,4 @@
-import { Http } from "./http.js";
+import { Http } from "./Http.js";
 import {
   CLICKUP_API_PREFIX,
   CLICKUP_LOGIN_USERNAME,
