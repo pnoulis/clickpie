@@ -24,10 +24,12 @@ function parseJSON(response) {
   return response.json();
 }
 
-function Http({ url, authToken, username } = {}) {
-  this.url = url;
-  this.authToken = authToken;
-  this.username = username;
+class Http {
+  constructor({ url, authToken, username } = {}) {
+    this.url = url;
+    this.authToken = authToken;
+    this.username = username;
+  }
 }
 
 Http.prototype.get = function (path, options) {
