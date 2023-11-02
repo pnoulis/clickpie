@@ -204,20 +204,20 @@ help:
 
 .PHONY: help
 # General setup of the repository
-.PHONY: all /* build application */
+.PHONY: all # build application
 # Software development
-.PHONY: dev /* develop application*/
-.PHONY: run /* read dotenvfile and run any file */
-.PHONY: scratch /* read dotenvfile and run the scratch file */
-.PHONY: env /* write environment into .env */
-.PHONY: env-dry /* print environment */
-.PHONY: build /* build application */
+.PHONY: dev # develop application
+.PHONY: run # read dotenvfile and run any file
+.PHONY: scratch # read dotenvfile and run the scratch file
+.PHONY: env # write environment into .env
+.PHONY: env-dry # print environment
+.PHONY: build # build application
 # Software distribution
-.PHONY: release /* release a new application version */
-.PHONY: publish /* publish current release to a cloud VCS */
-.PHONY: package /* package a new built and metadata into a form suitable for distribution */
-.PHONY: dist /* package the source repo and metadata into a form suitable for distribution */
-.PHONY: deploy /* deploy the application to the consumer, such as a server */
+.PHONY: release # release a new application version
+.PHONY: publish # publish current release to a cloud VCS
+.PHONY: package # package a new built and metadata into a form suitable for distribution
+.PHONY: dist # package the source repo and metadata into a form suitable for distribution
+.PHONY: deploy # deploy the application to the consumer, such as a server
 # Cleaning
-.PHONY: clean /* Remove files created by make build, install, package, dist... */
-.PHONY: distclean /* Remove files created by configure */
+.PHONY: clean # Remove files created by make build, install, package, dist...
+.PHONY: distclean # Remove files created by configure
