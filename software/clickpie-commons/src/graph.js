@@ -1,3 +1,4 @@
+import { removeIndex } from "js_utils/misc";
 /*
   An Adjacency-list tree is one solution of many to the question:
 
@@ -36,6 +37,34 @@
 */
 
 class Graph {
+  static fromJSON(json) {
+    let adjacencyList = JSON.parse(json);
+    const g = new Graph([adjacencyList[0].vertex]);
+    const matchesId = function (id) {
+      return (vertex) => id === vertex.id;
+    };
+    g.traverse(g.root, (vertex, stop) => {
+      let adjacents;
+      for (let i = 0; i < adjacencyList.length; i++) {
+        if (adjacencyList[i].vertex.id !== vertex.id) continue;
+        // locate adjacent vertices
+        adjacents = adjacencyList[i].edges;
+        adjacencyList = removeIndex(adjacencyList, i);
+        break;
+      }
+
+      // Add adjacent vertices to the graph if missing
+      for (let adjacent of adjacents) {
+        const found = g.findVertex(matchesId(adjacent.id));
+        if (!found) g.addVertex(adjacent);
+        // Connect adjacent vertices to vertex
+        g.addEdge(vertex, found || adjacent);
+      }
+
+      if (adjacencyList.length == 0) stop();
+    });
+    return g;
+  }
   /* verteces: u, v, w */
   /* edges: e, f */
   /* source vertex in BFS: s */
@@ -49,6 +78,11 @@ class Graph {
     for (const vertex of verteces.slice(1)) {
       this.addVertex(vertex);
       this.addEdge(this.root, vertex);
+    }
+  }
+  findVertex(clause) {
+    for (const vertex of this.adjacencyList.keys()) {
+      if (clause(vertex)) return vertex;
     }
   }
   addVertex(u) {
@@ -87,17 +121,25 @@ class Graph {
 
     while (queue.length > 0) {
       s = queue[0];
-      console.log(s);
       queue.shift();
 
+      cb(s, stop);
       for (const vertex of this.getNeighboors(s)) {
         if (!visited.has(vertex)) {
           visited.set(vertex, true);
           queue.push(vertex);
         }
       }
-      cb(s, stop);
     }
+  }
+
+  /* Transform *this* to an adjacency list in JSON format */
+  toJSON() {
+    const json = [];
+    for (const [vertex, edges] of this.adjacencyList) {
+      json.push({ vertex, edges: Array.from(edges) });
+    }
+    return JSON.stringify(json);
   }
   /* For development purposes */
   log() {

@@ -1,6 +1,7 @@
 {
   "name": "clickpie-software",
   "private": true,
+  "type": "module",
   "description": "clickpie software suite",
   "author": "pavlos noulis <pavlos.noulis@gmail.com> (https://github.com/pnoulis)",
   "license": "UNLICENSED",

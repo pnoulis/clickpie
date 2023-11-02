@@ -101,10 +101,10 @@ script_commons=$(appdir)/scripts/script-template.sh
 all: build
 
 # Run
-run: file?=./scripts/get-lists.sh
+run: file?=tmp/get-lists.sh
 run: env
 	$(loadenv)
-	$(bash) $(file) -d $(args)
+
 
 run-workspace: file?=./scripts/get-lists.sh
 run-workspace: env
@@ -128,7 +128,9 @@ run-folder: env
 	$(bash) $(file) -d $(args)
 
 # Scratch
-scratch:
+scratch: env
+	$(loadenv)
+	$(node) tmp/scratch.js
 
 # Build
 build:

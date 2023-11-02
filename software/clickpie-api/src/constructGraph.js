@@ -1,3 +1,7 @@
 import { Graph } from 'clickpie-commons'
 
-const g = new Graph();
+async function constructGraph() {
+
+}
+
+export { constructGraph };
