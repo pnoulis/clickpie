@@ -107,7 +107,9 @@ run: env
 	$(node) $(file) $(args)
 
 # Scratch
-scratch:
+scratch: env
+	$(loadenv)
+	$(node) tmp/scratch.js $(args)
 
 # Develop
 dev:
