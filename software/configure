@@ -10,12 +10,23 @@ main() {
   echo Configuring...
   echo Decrypting .secrets
   gpg --decrypt --quiet ../.secrets.gpg | grep -i $CLICKUP_LOGIN | sed "s/${CLICKUP_LOGIN}_//g" > .env.default
+
+  echo Setting up public domain server...
+  if [[ "${NGROK_URL:-}" == '' ]]; then
+    error 'Missing ngrok dynamic public domain server'
+  else
+    echo "NGROK_URL_PREFIX=$NGROK_URL" >> .env.default
+    echo "CLICKPIE_SERVER_URL_PREFIX=$NGROK_URL" >> .env.default
+  fi
 }
 
 parse_args(){
   declare -ga POSARGS=()
   while (($# > 0)); do
     case "${1:-}" in
+      --with-ngrok=* | --with-ngrok*)
+        NGROK_URL="$(parse_param "$@")" || shift $?
+        ;;
       --with-pn-clickup-login)
         CLICKUP_LOGIN='PN'
         ;;

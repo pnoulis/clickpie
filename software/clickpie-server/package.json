@@ -11,9 +11,8 @@
     "dev": "make dev"
   },
   "exports": {
-    ".": {
-      "import": "./src/server.js"
-    }
+    ".": "./src/index.js",
+    "./*": "./src/*.js"
   },
   "dependencies": {
     "@koa/router": "12.0.1",

@@ -1,5 +1,10 @@
-export * from './graph.js';
-export * from './ClickupHttpClient.js';
-export * from './Http.js';
-export * from './log.js';
-export * from './env.js';
+import { Graph } from "./graph.js";
+import { ClickupClient } from "./ClickupClient.js";
+import { Http } from "./Http.js";
+import { log } from "./log.js";
+import * as errs from "./err.js";
+import * as env from "./env.js";
+
+export { Graph, ClickupClient, Http, log, errs, env };
+
+export default { Graph, ClickupClient, Http, log, errs, env };

@@ -1,2 +1,5 @@
-export * from './Clickup.js';
-export * from './cache.js';
+import { Api } from "./Api.js";
+
+export { Api };
+
+export default { Api };

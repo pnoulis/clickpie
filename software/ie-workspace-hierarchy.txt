@@ -1,0 +1,460 @@
+/home/pnoul/bin/dotenv --mode=production ./config/env . | /usr/bin/sort > .env
+set -a; source .env
+/usr/bin/env bash ./scripts/get-workspaces.sh -d -vvv
+[
+  {
+    "id": "9004118418",
+    "name": "Intelligent Entertainment's Workspace",
+    "color": "#f42c2c",
+    "avatar": "https://attachments2.clickup.com/team_avatars/7f0239b3-aaef-4ead-a013-bac777bd684c.blob?Expires=1714435200&Key-Pair-Id=APKAIYJRUKB5RLQWHZWQ&Signature=ppAISdhAMT0nZ~mLLJKOQ7iIBOFjKlsGPV1680OUCL~UxhwOzMEmHFDyqM8SPmQ5W1RVREr~WfQ3KUf1WaFpytQY-tlmEejb9m-7-lbSNQTePa-gtl6R515U3CmJFg3z6eivSDNmgyrmi7Odjq24aFPVOXbjxpgBJnOnxBWe~i4hJWV5UGgAUViEV0Srp2H2zw6sgDPJxgb1fbI4dVYtXbBvPXoiTOoKR3qRZ7xTuKEuo8oq7cladsm2HTL0v483381vT1brj~1ZduOLfjaSY4wrmpLjMerwG9vzLC3yfxMpUH9u8o970LPlvVLzTyyLeo5dm~AWZBRBEoJ2dzykJA__",
+    "members": [
+      {
+        "user": {
+          "id": 82535949,
+          "username": "Accounting Department",
+          "email": "tax@iegroup.gr",
+          "color": "#5f55ee",
+          "profilePicture": null,
+          "initials": "AD",
+          "role": 3,
+          "custom_role": null,
+          "last_active": "1698938010183",
+          "date_joined": "1698922204441",
+          "date_invited": "1698913988769"
+        },
+        "invited_by": {
+          "id": 60345582,
+          "username": "Intelligent Entertainment",
+          "color": "#f42c2c",
+          "email": "hello@iegroup.gr",
+          "initials": "IE",
+          "profilePicture": null
+        }
+      },
+      {
+        "user": {
+          "id": 56576475,
+          "username": "George Michailidis",
+          "email": "pgeomich@gmail.com",
+          "color": null,
+          "profilePicture": null,
+          "initials": "GM",
+          "role": 4,
+          "custom_role": null,
+          "last_active": "1698671905037",
+          "date_joined": "1698334110191",
+          "date_invited": "1698328893781"
+        },
+        "invited_by": {
+          "id": 60345582,
+          "username": "Intelligent Entertainment",
+          "color": "#f42c2c",
+          "email": "hello@iegroup.gr",
+          "initials": "IE",
+          "profilePicture": null
+        },
+        "can_see_time_spent": true,
+        "can_see_time_estimated": true,
+        "can_see_points_estimated": true,
+        "can_edit_tags": false,
+        "can_create_views": false
+      },
+      {
+        "user": {
+          "id": 56567934,
+          "username": "Electronic Department",
+          "email": "electronics@iegroup.gr",
+          "color": null,
+          "profilePicture": null,
+          "initials": "ED",
+          "role": 3,
+          "custom_role": {
+            "id": 1748664,
+            "name": "partner",
+            "is_read_only": null,
+            "max_permission_to_share_with": null,
+            "role_description": null
+          },
+          "last_active": "1698998212199",
+          "date_joined": "1698146042674",
+          "date_invited": "1698061414361"
+        },
+        "invited_by": {
+          "id": 6721728,
+          "username": "Vasileios Pantsakis",
+          "color": "#0197a7",
+          "email": "vasileios@pantsakis.gr",
+          "initials": "VP",
+          "profilePicture": "https://attachments.clickup.com/profilePictures/6721728_wff.jpg"
+        }
+      },
+      {
+        "user": {
+          "id": 10821698,
+          "username": "grigoris kolasis",
+          "email": "grigoris@iegroup.gr",
+          "color": "#1b5e20",
+          "profilePicture": null,
+          "initials": "GK",
+          "role": 3,
+          "custom_role": null,
+          "last_active": "1698995867065",
+          "date_joined": "1698061635706",
+          "date_invited": "1698054263258"
+        },
+        "invited_by": {
+          "id": 6721728,
+          "username": "Vasileios Pantsakis",
+          "color": "#0197a7",
+          "email": "vasileios@pantsakis.gr",
+          "initials": "VP",
+          "profilePicture": "https://attachments.clickup.com/profilePictures/6721728_wff.jpg"
+        }
+      },
+      {
+        "user": {
+          "id": 56567470,
+          "username": "Software Department",
+          "email": "software@iegroup.gr",
+          "color": "#304ffe",
+          "profilePicture": null,
+          "initials": "SD",
+          "role": 2,
+          "custom_role": null,
+          "last_active": "1698914755173",
+          "date_joined": "1698061972254",
+          "date_invited": "1698053274051"
+        },
+        "invited_by": {
+          "id": 6721728,
+          "username": "Vasileios Pantsakis",
+          "color": "#0197a7",
+          "email": "vasileios@pantsakis.gr",
+          "initials": "VP",
+          "profilePicture": "https://attachments.clickup.com/profilePictures/6721728_wff.jpg"
+        }
+      },
+      {
+        "user": {
+          "id": 6721729,
+          "username": "Yannis Bakaloudis",
+          "email": "yannis@iegroup.gr",
+          "color": "#02bcd4",
+          "profilePicture": "https://attachments.clickup.com/profilePictures/6721729_cpc.jpg",
+          "initials": "YB",
+          "role": 3,
+          "custom_role": null,
+          "last_active": "1698938254835",
+          "date_joined": "1698060102331",
+          "date_invited": "1698052891509"
+        },
+        "invited_by": {
+          "id": 6721728,
+          "username": "Vasileios Pantsakis",
+          "color": "#0197a7",
+          "email": "vasileios@pantsakis.gr",
+          "initials": "VP",
+          "profilePicture": "https://attachments.clickup.com/profilePictures/6721728_wff.jpg"
+        }
+      },
+      {
+        "user": {
+          "id": 36303617,
+          "username": "Katos Tasos",
+          "email": "tasos@iegroup.gr",
+          "color": null,
+          "profilePicture": null,
+          "initials": "KT",
+          "role": 2,
+          "custom_role": null,
+          "last_active": "1698937770337",
+          "date_joined": "1698053043568",
+          "date_invited": "1698052830836"
+        },
+        "invited_by": {
+          "id": 6721728,
+          "username": "Vasileios Pantsakis",
+          "color": "#0197a7",
+          "email": "vasileios@pantsakis.gr",
+          "initials": "VP",
+          "profilePicture": "https://attachments.clickup.com/profilePictures/6721728_wff.jpg"
+        }
+      },
+      {
+        "user": {
+          "id": 6778194,
+          "username": "Panagiotis Karanasios",
+          "email": "panagiotis@iegroup.gr",
+          "color": "#304ffe",
+          "profilePicture": null,
+          "initials": "PK",
+          "role": 3,
+          "custom_role": null,
+          "last_active": "1698941366260",
+          "date_joined": "1698053349202",
+          "date_invited": "1698052826196"
+        },
+        "invited_by": {
+          "id": 6721728,
+          "username": "Vasileios Pantsakis",
+          "color": "#0197a7",
+          "email": "vasileios@pantsakis.gr",
+          "initials": "VP",
+          "profilePicture": "https://attachments.clickup.com/profilePictures/6721728_wff.jpg"
+        }
+      },
+      {
+        "user": {
+          "id": 6721728,
+          "username": "Vasileios Pantsakis",
+          "email": "vasileios@pantsakis.gr",
+          "color": "#0197a7",
+          "profilePicture": "https://attachments.clickup.com/profilePictures/6721728_wff.jpg",
+          "initials": "VP",
+          "role": 2,
+          "custom_role": null,
+          "last_active": "1698994194682",
+          "date_joined": "1698052401178",
+          "date_invited": "1698052334105"
+        },
+        "invited_by": {
+          "id": 60345582,
+          "username": "Intelligent Entertainment",
+          "color": "#f42c2c",
+          "email": "hello@iegroup.gr",
+          "initials": "IE",
+          "profilePicture": null
+        }
+      },
+      {
+        "user": {
+          "id": 60420866,
+          "username": "Pavlos Triantis",
+          "email": "pavlos@iegroup.gr",
+          "color": "",
+          "profilePicture": null,
+          "initials": "PT",
+          "role": 3,
+          "custom_role": {
+            "id": 1748664,
+            "name": "partner",
+            "is_read_only": null,
+            "max_permission_to_share_with": null,
+            "role_description": null
+          },
+          "last_active": "1698997975165",
+          "date_joined": "1695029117102",
+          "date_invited": "1694591200350"
+        },
+        "invited_by": {
+          "id": 60345582,
+          "username": "Intelligent Entertainment",
+          "color": "#f42c2c",
+          "email": "hello@iegroup.gr",
+          "initials": "IE",
+          "profilePicture": null
+        }
+      },
+      {
+        "user": {
+          "id": 60417599,
+          "username": "Art Department",
+          "email": "art@iegroup.gr",
+          "color": "#aa2fff",
+          "profilePicture": null,
+          "initials": "AD",
+          "role": 3,
+          "custom_role": {
+            "id": 1748664,
+            "name": "partner",
+            "is_read_only": null,
+            "max_permission_to_share_with": null,
+            "role_description": null
+          },
+          "last_active": "1698998205629",
+          "date_joined": "1694588650863",
+          "date_invited": "1694156098737"
+        },
+        "invited_by": {
+          "id": 60345582,
+          "username": "Intelligent Entertainment",
+          "color": "#f42c2c",
+          "email": "hello@iegroup.gr",
+          "initials": "IE",
+          "profilePicture": null
+        }
+      },
+      {
+        "user": {
+          "id": 60417595,
+          "username": "Visual Department",
+          "email": "graphic@iegroup.gr",
+          "color": "#02bcd4",
+          "profilePicture": null,
+          "initials": "VD",
+          "role": 3,
+          "custom_role": {
+            "id": 1748664,
+            "name": "partner",
+            "is_read_only": null,
+            "max_permission_to_share_with": null,
+            "role_description": null
+          },
+          "last_active": "1698937978831",
+          "date_joined": "1694171235090",
+          "date_invited": "1694156001769"
+        },
+        "invited_by": {
+          "id": 60345582,
+          "username": "Intelligent Entertainment",
+          "color": "#f42c2c",
+          "email": "hello@iegroup.gr",
+          "initials": "IE",
+          "profilePicture": null
+        }
+      },
+      {
+        "user": {
+          "id": 60345653,
+          "username": "Maria Germantzidou",
+          "email": "marketing@iegroup.gr",
+          "color": "#ea80fc",
+          "profilePicture": null,
+          "initials": "MG",
+          "role": 3,
+          "custom_role": null,
+          "last_active": "1688738609350",
+          "date_joined": "1688132616856",
+          "date_invited": "1688132532781"
+        },
+        "invited_by": {
+          "id": 60345582,
+          "username": "Intelligent Entertainment",
+          "color": "#f42c2c",
+          "email": "hello@iegroup.gr",
+          "initials": "IE",
+          "profilePicture": null
+        }
+      },
+      {
+        "user": {
+          "id": 60345661,
+          "username": "Erato Gazani",
+          "email": "support@iegroup.gr",
+          "color": "#cddc39",
+          "profilePicture": null,
+          "initials": "EG",
+          "role": 3,
+          "custom_role": {
+            "id": 1748664,
+            "name": "partner",
+            "is_read_only": null,
+            "max_permission_to_share_with": null,
+            "role_description": null
+          },
+          "last_active": "1698996447585",
+          "date_joined": "1694171203054",
+          "date_invited": "1688128535862"
+        },
+        "invited_by": {
+          "id": 60345582,
+          "username": "Intelligent Entertainment",
+          "color": "#f42c2c",
+          "email": "hello@iegroup.gr",
+          "initials": "IE",
+          "profilePicture": null
+        }
+      },
+      {
+        "user": {
+          "id": 60345657,
+          "username": "Panagiotis Dikranis",
+          "email": "pdikranis@iegroup.gr",
+          "color": "#795548",
+          "profilePicture": null,
+          "initials": "PD",
+          "role": 3,
+          "custom_role": null,
+          "last_active": "1698957850462",
+          "date_joined": "1689582053644",
+          "date_invited": "1688128402020"
+        },
+        "invited_by": {
+          "id": 60345582,
+          "username": "Intelligent Entertainment",
+          "color": "#f42c2c",
+          "email": "hello@iegroup.gr",
+          "initials": "IE",
+          "profilePicture": null
+        }
+      },
+      {
+        "user": {
+          "id": 6721761,
+          "username": "John moraitis",
+          "email": "john@iegroup.gr",
+          "color": "#02bcd4",
+          "profilePicture": null,
+          "initials": "JM",
+          "role": 3,
+          "custom_role": {
+            "id": 1748664,
+            "name": "partner",
+            "is_read_only": null,
+            "max_permission_to_share_with": null,
+            "role_description": null
+          },
+          "last_active": "1698984720131",
+          "date_joined": "1693997386248",
+          "date_invited": "1688128397472"
+        },
+        "invited_by": {
+          "id": 60345582,
+          "username": "Intelligent Entertainment",
+          "color": "#f42c2c",
+          "email": "hello@iegroup.gr",
+          "initials": "IE",
+          "profilePicture": null
+        }
+      },
+      {
+        "user": {
+          "id": 60345652,
+          "username": "Katerina Kanoura",
+          "email": "sales@iegroup.gr",
+          "color": "#ff897f",
+          "profilePicture": null,
+          "initials": "KK",
+          "role": 2,
+          "custom_role": null,
+          "last_active": "1698941038007",
+          "date_joined": "1688130608876",
+          "date_invited": "1688128330072"
+        },
+        "invited_by": {
+          "id": 60345582,
+          "username": "Intelligent Entertainment",
+          "color": "#f42c2c",
+          "email": "hello@iegroup.gr",
+          "initials": "IE",
+          "profilePicture": null
+        }
+      },
+      {
+        "user": {
+          "id": 60345582,
+          "username": "Intelligent Entertainment",
+          "email": "hello@iegroup.gr",
+          "color": "#f42c2c",
+          "profilePicture": null,
+          "initials": "IE",
+          "role": 1,
+          "custom_role": null,
+          "last_active": "1698938035942",
+          "date_joined": "1688123530083",
+          "date_invited": "1688123530083"
+        }
+      }
+    ]
+  }
+]

@@ -3,8 +3,8 @@ import {
   CLICKUP_API_PREFIX,
   CLICKUP_LOGIN_USERNAME,
   CLICKUP_LOGIN_TOKEN,
+  CLICKPIE_SERVER_URL_PREFIX,
 } from "clickpie-commons";
-import { Graph } from 'clickpie-commons';
 
 class Clickup extends Http {
   constructor({ url, authToken, username } = {}) {
@@ -26,15 +26,10 @@ class Clickup extends Http {
     );
   }
 
-  constructGraph() {
-    const g = new Graph({
-      type: 'account',
-      id: this.username,
-    });
-    g.traverse(this.root, (vertex, stop) => {
-
-    })
+  createHook({ name, events, spaceId, folderId, listId, taskId}) {
+    log.info(`Create webhook: ${CLICKPIE_SERVER_URL_PREFIX}/${name}`);
   }
+
 }
 
 export { Clickup };

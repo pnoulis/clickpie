@@ -40,6 +40,7 @@ appdir_abs:=$(realpath $(appdir))
 srcdir:=$(appdir)/src
 buildir:=$(appdir)/build
 confdir:=$(appdir)/config
+CACHEDIR=$(appdir_abs)/var/cache/clickpie
 
 # Tools
 install=/usr/bin/install
@@ -50,7 +51,7 @@ rm:=/usr/bin/rm
 chmod:=/usr/bin/chmod
 mpp:=/usr/bin/m4
 node:=$(NVM_BIN)/node
-bash:=/usr/bin/env bash
+bash:=$(SHELL)
 compiler:=
 tester:=
 linter:=
@@ -58,7 +59,7 @@ formatter:=
 pretty_output:=
 dotenv:=/home/pnoul/bin/dotenv
 dotenvdirs:=$(confdir)/env $(appdir)
-dotenvflags:=--mode=$(MODE)
+dotenvflags:=--mode=$(MODE) --environment="CACHEDIR=$(CACHEDIR);"
 dotenvfile:=.env
 loadenv:=set -a; source $(dotenvfile)
 json2csv:=$(appdir)/scripts/json2csv.jq
@@ -106,31 +107,39 @@ run: env
 	$(loadenv)
 
 
-run-workspace: file?=./scripts/get-lists.sh
-run-workspace: env
+get-workspaces: env
 	$(loadenv)
-	WORKSPACE_ID=9015040672	\
-	$(bash) $(file) -d $(args)
+	$(bash) ./scripts/get-workspaces.sh $(args)
 
-run-space: file?=./scripts/get-lists.sh
-run-space: env
+get-spaces: env
 	$(loadenv)
-	WORKSPACE_ID=9015040672 \
-	SPACE_ID=90150088592 \
-	$(bash) $(file) -d $(args)
+	$(bash) ./scripts/get-spaces.sh $(args)
 
-run-folder: file?=./scripts/get-lists.sh
-run-folder: env
+get-folders: env
 	$(loadenv)
-	WORKSPACE_ID=9015040672 \
-	SPACE_ID=90150088592 \
-	FOLDER_ID=90150348005 \
-	$(bash) $(file) -d $(args)
+	$(bash) ./scripts/get-folders.sh $(args)
+
+get-lists: env
+	$(loadenv)
+	$(bash) ./scripts/get-lists.sh $(args)
+
+get-webhooks: env
+	$(loadenv)
+	$(bash) ./scripts/get-webhooks.sh $(args)
+
+create-webhook: env
+	$(loadenv)
+	$(bash) ./scripts/create-webhook.sh $(args)
 
 # Scratch
 scratch: env
 	$(loadenv)
 	$(node) tmp/scratch.js
+
+dev: env
+	source .env
+	make -C clickpie-server dev &> clickpie.logs &
+	echo "Please start ngrok at port $$PORT"
 
 # Build
 build:

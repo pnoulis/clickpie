@@ -4,10 +4,11 @@ _SPACE_ID="${SPACE_ID:-}"
 _FOLDER_ID="${FOLDER_ID:-}"
 _LIST_ID="${LIST_ID:-}"
 _OUTPUT_FORMAT=json
+_CLICKPIE_SERVER_URL_PREFIX="${CLICKPIE_SERVER_URL_PREFIX:-}"
 declare -i _VERBOSE=0
 
 # Required parameters inherited from the parent process environment
-_USER_AUTH_TOKEN="${CLICKUP_AUTH_TOKEN:-}"
+_USER_AUTH_TOKEN="${CLICKUP_LOGIN_TOKEN:-}"
 _CLICKUP_API_PREFIX="${CLICKUP_API_PREFIX:-}"
 _JSON2CSV="${json2csv:-}"
 

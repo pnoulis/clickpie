@@ -9,7 +9,8 @@ https://clickup.com
 ** Clickup API documentation
 https://clickup.com/api/
 
-* Using the clickup API
+* Clickup
+** The clickup API overview
 clickup exposes its services through a REST API. One may use CURL to initiate a
 one-off request to clickup.
 
@@ -20,16 +21,30 @@ communication with a REST API it will initiate a request each time an event
 occurs for which a handler has been defined. The server then is responsible for
 performing any side effects using clickup's REST API.
 
-* Clickup API structure
+** Clickup API structure
 prefix=https://api.clickup.com/api/v2
 
 team=$prefix/team
 
+** Clickup hierarchies
+*** list 1-* tasks 1-* subtasks 1-* checklists
+** Webhooks
+https://clickup.com/api/developer-portal/webhooks/
+
+* Koa
+** Koa response statuses
+https://github.com/koajs/koa/blob/master/docs/api/response.md
+
+* Software requirements
+** Add new webhooks
+** Delete webhooks
+** List webhooks
 
 * Tasks Board
 ** DONE Communicate with the clickup api
 CLOSED: [2023-10-31 Tue 14:14]
 ** DONE include Authorization header token to an API Request
 CLOSED: [2023-10-31 Tue 14:14]
-
-** TODO
+** TODO Explore and extend functionality of the Graph class
+** TODO implementing propagateStatus
+Webhook -> clickup register URL to handle event

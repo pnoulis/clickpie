@@ -1,9 +1,8 @@
 #!/usr/bin/env bash
 
-# Get ALL SPACES available to the $AUTHENTICATED_USER.
-# Given a WORKSPACE, limit the output to SPACES in WORKSPACE.
+# Get ALL WEBHOOKS available to the $AUTHENICATED_USER
+# Given a WORKSPACE, limit the output to WEBHOOKS in WORKSPACE
 
-# Required parameters inherited from the parent process environment
 _SCRIPT_COMMONS="${script_commons:-}"
 
 main() {
@@ -13,22 +12,17 @@ main() {
   debug_script_params
   tempout=$(mktemp)
 
-  if [[ "${_WORKSPACE_ID:-}" != "" ]]; then
-    debug 'limit output to spaces in workspace'
-    spaces_url=${_CLICKUP_API_PREFIX}/team/${_WORKSPACE_ID}/space?archived=false
-    curl --request GET --silent --header "Authorization: ${_USER_AUTH_TOKEN}" \
-         $spaces_url > $tempout
+  if [[ "${_WORKSPACE_ID}" != '' ]]; then
+    debug 'limit output to webhooks in workspace'
   else
-    debug 'get all workspaces'
+    debug 'get all wehbooks'
     while read -r workspace_id; do
-      spaces_url=${_CLICKUP_API_PREFIX}/team/${workspace_id}/space?archived=false
-      curl --request GET \
-           --silent \
-           --header "Authorization: ${_USER_AUTH_TOKEN}" \
-           $spaces_url >> $tempout
+      webhooks_url=${_CLICKUP_API_PREFIX}/team/${workspace_id}/webhook?archive=false
+      curl --request GET --silent --header "Authorization: ${_USER_AUTH_TOKEN}" \
+           $webhooks_url >> $tempout
     done < <(./scripts/get-workspaces.sh --format=line)
   fi
-  cat $tempout | jq '.spaces[]' | jq -s '.' | sponge $tempout
+  jq '.webhooks[]' $tempout | jq -s '.' | sponge $tempout
 
   case $_VERBOSE in
     0)
@@ -50,16 +44,16 @@ main() {
       esac
       ;;
     1)
-      # Show ID's and Names
+      # Show ID's and URL's
       case $_OUTPUT_FORMAT in
         json)
-          jq '.[] | { id: .id, name: .name }' $tempout | jq -s '.'
+          jq '.[] | { id: .id, url: .endpoint }' $tempout | jq -s '.'
         ;;
         csv)
-          jq '.[] | { id: .id, name: .name }' $tempout | jq -s '.' | jq -rf $_JSON2CSV
+          jq '.[] | { id: .id, url: .endpoint }' $tempout | jq -s '.' | jq -rf $_JSON2CSV
         ;;
         line)
-          jq '.[] | { id: .id, name: .name }' $tempout | jq -s '.' | jq -rf $_JSON2CSV | tail --lines=+2 | sed 's/,/ /g'
+          jq '.[] | { id: .id, url: .endpoint }' $tempout | jq -s '.' | jq -rf $_JSON2CSV | tail --lines=+2 | sed 's/,/ /g'
         ;;
         *)
           rm $tempout
@@ -72,11 +66,11 @@ main() {
       case $_OUTPUT_FORMAT in
         json)
           jq '.' $tempout
-          ;;
+        ;;
         csv)
-          ;;
+        ;;
         line)
-          ;;
+        ;;
         *)
           rm $tempout
           error "Unrecognized output format: $(quote $_OUTPUT_FORMAT)"

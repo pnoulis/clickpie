@@ -37,6 +37,7 @@ import { removeIndex } from "js_utils/misc";
 */
 
 class Graph {
+
   static fromJSON(json) {
     let adjacencyList = JSON.parse(json);
     const g = new Graph([adjacencyList[0].vertex]);
@@ -65,6 +66,7 @@ class Graph {
     });
     return g;
   }
+
   /* verteces: u, v, w */
   /* edges: e, f */
   /* source vertex in BFS: s */

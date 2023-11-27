@@ -114,6 +114,15 @@ dev: env
 	$(loadenv)
 	$(node) $(srcdir)/index.js
 
+# Serve
+serve: env
+	$(loadenv)
+ifdef daemon
+	$(node) $(srcdir)/serve.js &
+else
+	$(node) $(srcdir)/serve.js
+endif
+
 # Release
 release: distribution:=$(appdir_abs)
 release: metafiles:=$(addprefix $(appdir_abs)/,$(metafiles))
@@ -232,6 +241,7 @@ help:
 .PHONY: all # build application
 # Software development
 .PHONY: dev # develop application
+.PHONY: serve # serve service
 .PHONY: run # read dotenvfile and run any file
 .PHONY: scratch # read dotenvfile and run the scratch file
 .PHONY: env # write environment into .env

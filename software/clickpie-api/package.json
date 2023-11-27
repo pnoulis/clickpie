@@ -11,11 +11,7 @@
     "dev": "make dev"
   },
   "exports": {
-    ".": {
-      "import": "./src/index.js"
-    },
-    "./*": {
-      "import": "./src/*.js"
-    }
+    ".": "./src/index.js",
+    "./*": "./src/*.js"
   }
 }

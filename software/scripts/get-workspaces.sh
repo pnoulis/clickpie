@@ -56,7 +56,6 @@ main() {
       esac
       ;;
     2) # Show ID's, Names, Permissions, ...
-      echo its 2
       case $_OUTPUT_FORMAT in
         json)
         ;;
