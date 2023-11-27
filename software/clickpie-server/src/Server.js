@@ -9,8 +9,8 @@ class Server {
     this.local = localUrl instanceof URL ? localUrl : new URL(localUrl);
     this.public.port ||= port;
     this.local.port ||= port;
-    log.debug(this.public);
-    log.debug(this.local);
+    log.trace(this.public);
+    log.trace(this.local);
   }
 }
 
@@ -28,6 +28,30 @@ Server.prototype.start = async function () {
     ctx.set("X-Response-Time", `${ms}ms`);
   });
   this.server.use(koaBody());
+  this.server.use(async (ctx, next) => {
+    log.info(
+      `CLICKPIE-SERVER REQ ${ctx.method} ${ctx.request
+        .get("Content-Type")
+        .split(";")
+        .at(0)} ${ctx.path}`,
+    );
+    log.trace(ctx.request.headers);
+    log.info(ctx.request.body);
+    try {
+      await next();
+      log.info(
+        `CLICKPIE-SERVER RES ${ctx.method} ${ctx.response
+          .get("Content-Type")
+          .split(";")
+          .at(0)} ${ctx.path}`,
+      );
+      log.trace(ctx.response.headers);
+      log.info(ctx.body);
+    } catch (err) {
+      log.error(err);
+      ctx.status = 500;
+    }
+  });
   this.server.use(router.routes());
 
   this.server.listen(this.local.port, () =>

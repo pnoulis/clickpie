@@ -50,7 +50,7 @@ cp:=/usr/bin/cp
 rm:=/usr/bin/rm
 chmod:=/usr/bin/chmod
 mpp:=/usr/bin/m4
-node:=$(NVM_BIN)/node
+node:=$(HOME)/.nvm/versions/node/v20.5.1/bin/node
 bash:=$(SHELL)
 compiler:=
 tester:=
@@ -106,7 +106,6 @@ run: file?=tmp/get-lists.sh
 run: env
 	$(loadenv)
 
-
 get-workspaces: env
 	$(loadenv)
 	$(bash) ./scripts/get-workspaces.sh $(args)
@@ -134,7 +133,7 @@ create-webhook: env
 # Scratch
 scratch: env
 	$(loadenv)
-	$(node) tmp/scratch.js
+	$(node) ./tmp/scratch.js
 
 dev: env
 	source .env
@@ -156,32 +155,32 @@ publish:
 deploy:
 
 # Distribute binary release
-package: dist_target:=bin
-package: dist_basename:=$(distbin_basename)
-package: distribution:=$(distbin)
-package: $(distbin).$$(archive)
-$(distbin).tar.gz: $(distbin)
-	tar --dereference --create --file=- $(distbin) \
-	| gzip --to-stdout --best - > $(distbin).tar.gz
-$(distbin).zip: $(distbin)
-	zip -r - $(distbin) > $(distbin).zip
-$(distbin): metafiles:=$(addprefix $(distbin)/, $(metafiles))
-$(distbin): build mkdistdir $$(metafiles)
+# package: dist_target:=bin
+# package: dist_basename:=$(distbin_basename)
+# package: distribution:=$(distbin)
+# package: $(distbin).$$(archive)
+# $(distbin).tar.gz: $(distbin)
+# 	tar --dereference --create --file=- $(distbin) \
+# 	| gzip --to-stdout --best - > $(distbin).tar.gz
+# $(distbin).zip: $(distbin)
+# 	zip -r - $(distbin) > $(distbin).zip
+# $(distbin): metafiles:=$(addprefix $(distbin)/, $(metafiles))
+# $(distbin): build mkdistdir $$(metafiles)
 
-# Distribute source release
-dist: dist_target:=src
-dist: dist_basename:=$(distsrc_basename)
-dist: distribution:=$(distsrc)
-dist: $(distsrc).$$(archive)
-$(distsrc).tar.gz: $(distsrc)
-	@echo make $@
-	tar --dereference --create --file=- $(distsrc) \
-	| gzip --to-stdout --best - > $(distsrc).tar.gz
-$(distsrc).zip: $(distsrc)
-	@echo make $@
-	zip -r - $(distsrc) > $(distsrc).zip
-$(distsrc): metafiles:=$(addprefix $(distsrc)/, $(metafiles))
-$(distsrc): mkdistdir $$(metafiles)
+# # Distribute source release
+# dist: dist_target:=src
+# dist: dist_basename:=$(distsrc_basename)
+# dist: distribution:=$(distsrc)
+# dist: $(distsrc).$$(archive)
+# $(distsrc).tar.gz: $(distsrc)
+# 	@echo make $@
+# 	tar --dereference --create --file=- $(distsrc) \
+# 	| gzip --to-stdout --best - > $(distsrc).tar.gz
+# $(distsrc).zip: $(distsrc)
+# 	@echo make $@
+# 	zip -r - $(distsrc) > $(distsrc).zip
+# $(distsrc): metafiles:=$(addprefix $(distsrc)/, $(metafiles))
+# $(distsrc): mkdistdir $$(metafiles)
 
 mkdistdir:
 	-rm -rdf $(distribution)

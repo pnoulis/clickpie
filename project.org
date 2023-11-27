@@ -31,6 +31,15 @@ team=$prefix/team
 ** Webhooks
 https://clickup.com/api/developer-portal/webhooks/
 
+* Ngrok
+** About
+Ngrok's is a kind of server that exposes a local port to the web via a public
+domain. It is very usefull for development purposes as it allows quickly serving
+a local application globally through a public domain without the need for
+buying a domain name etc.
+** Usage
+ngrok http localhost[:port]
+
 * Koa
 ** Koa response statuses
 https://github.com/koajs/koa/blob/master/docs/api/response.md
@@ -48,3 +57,4 @@ CLOSED: [2023-10-31 Tue 14:14]
 ** TODO Explore and extend functionality of the Graph class
 ** TODO implementing propagateStatus
 Webhook -> clickup register URL to handle event
+** TODO Find out what resource ID refers to in webhook fire event.

@@ -33,10 +33,11 @@ class Http {
 }
 
 Http.prototype.get = function (path, options) {
+  log.info(`HTTP GET ${this.url + path}`);
   return fetch(this.url + path, {
     method: "get",
     headers: {
-      Authorization: this.authToken,
+      ["Authorization"]: this.authToken,
     },
   })
     .then(checkStatus)
@@ -49,7 +50,7 @@ Http.prototype.post = function (path, body, options) {
     body: JSON.stringify(body),
     headers: {
       ["Content-Type"]: "application/json",
-      Authorization: this.authToken,
+      ["Authorization"]: this.authToken,
     },
   })
     .then(checkStatus)

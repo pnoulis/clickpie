@@ -40,9 +40,12 @@ class ERR_HTTP_RESPONSE extends CustomError {
   constructor(req, res) {
     super({
       code: ERR_HTTP_RESPONSE.code,
-      msg: `HTTP Error response: ${res.status} ${res.statusText} at '${req.path}'`,
+      msg: `${res.status} ${res.statusText}`,
       req,
-      res,
+      res: {
+        code: res.status,
+        text: res.statusText,
+      },
     });
   }
 }
