@@ -33,10 +33,9 @@ https://clickup.com/api/developer-portal/webhooks/
 
 * Ngrok
 ** About
-Ngrok's is a kind of server that exposes a local port to the web via a public
-domain. It is very usefull for development purposes as it allows quickly serving
-a local application globally through a public domain without the need for
-buying a domain name etc.
+Ngrok's is a service that exposes a local port to the world wide web through its
+own dynamic domains. Through this service a local application may be quickly
+tested under "real" conditions and shared to clients for a quick preview.
 ** Usage
 ngrok http localhost[:port]
 
@@ -58,3 +57,5 @@ CLOSED: [2023-10-31 Tue 14:14]
 ** TODO implementing propagateStatus
 Webhook -> clickup register URL to handle event
 ** TODO Find out what resource ID refers to in webhook fire event.
+* Issues
+** Emacs fails to add tabs when indenting rules if the file being parsed in not Makefile (for example, Makefile.in)

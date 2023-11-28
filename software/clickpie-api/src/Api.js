@@ -15,13 +15,13 @@ class Api {
     return this.getWorkspaces({ quiet: true })
       .then((wss) =>
         Promise.all(
-          wss.map((wsid) => this.clickup.get(`/team/${wsid}/webhook`)),
+          wss.map((workid) => this.clickup.get(`/team/${workid}/webhook`)),
         ),
       )
       .then((wss) => wss.map((ws) => ws.webhooks).flat())
       .then((hooks) => (quiet ? hooks.map((hook) => hook.id) : hooks));
   }
-  createHook({ name, events, wsid, ...options } = {}) {
+  createHook({ name, events, workid, ...options } = {}) {
     const params = {
       events: events?.length > 1 ? events : "*",
       spacid: options.spacid,
@@ -30,7 +30,7 @@ class Api {
       taskid: options.taskid,
     };
     if (!name) throw new ERR_INVALID_ARG_VALUE("name", name);
-    else if (!wsid) throw new ERR_INVALID_ARG_VALUE("wsid", wsid);
+    else if (!workid) throw new ERR_INVALID_ARG_VALUE("workid", workid);
     const hookend = this.webhookUrl + "/" + name;
     log.debug(`create hook: ${hookend}`);
   }

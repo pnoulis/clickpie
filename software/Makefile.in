@@ -1,0 +1,73 @@
+SHELL:=/usr/bin/bash
+.SHELLFLAGS:=-o errexit -o pipefail -c -o nounset
+.DEFAULT_GOAL:= all
+.DELETE_OR_ERROR:
+.EXPORT_ALL_VARIABLES:
+.SECONDEXPANSION:
+.ONESHELL:
+
+APP_NAME=IN_APP_NAME
+APP_VERSION=IN_APP_VERSION
+APP_VVERSION=IN_APP_VVERSION
+APP_DISTNAME=IN_APP_DISTNAME
+API_VERSION=IN_API_VERSION
+API_VVERSION=IN_API_VVERSION
+
+appdir:=.
+appdir_abs:=$(realpath $(appdir))
+srcdir:=$(appdir)/src
+buildir:=$(appdir)/build
+confdir:=$(appdir)/config
+
+# Standard Tools
+# ------------------------------
+install=/usr/bin/install
+mkdirp:=/usr/bin/mkdir -p
+sort:=/usr/bin/sort
+cp:=/usr/bin/cp
+rm:=/usr/bin/rm
+chmod:=/usr/bin/chmod
+m4:=/usr/bin/m4
+node:=$(HOME)/.nvm/versions/node/v21.1.0/bin/node
+bash:=/usr/bin/bash
+
+# Tools and their configurations
+# ------------------------------
+dotenv:=/home/pnoul/bin/dotenv
+dotenvdirs:=$(confdir)/env/* $(appdir)
+dotenvfile:=.env
+loadenv:=set -a; source $(dotenvfile)
+json2csv:=$(appdir)/scripts/json2csv.jq
+
+run: file=
+run: dotenv $(file)
+	@if [[ "$${file:-}" == "" ]]; then
+	echo 'Usage: `make run file [args]`'
+	exit 1
+	fi
+	extension="$${file##*.}"
+	case $$extension in
+	sh)
+	$(SHELL) $(file) $(args)
+	;;
+	*)
+	echo "Unrecognized extension: $$extension"
+	echo 'Failed to `make $@ $^`'
+	;;
+	esac
+
+.DEFAULT:
+	@if [ ! -f "$<" ]; then
+	echo "Missing file $${file:-}"
+	exit 1
+	fi
+
+dotenv: $(dotenvfile)
+  echo yolo
+
+$(dotenvfile): $(dotenvdirs)
+	$(dotenv) $(DOTENVFLAGS) $^ | sort > $@
+
+# Local Variables:
+# mode: makefile-gmake
+# End:

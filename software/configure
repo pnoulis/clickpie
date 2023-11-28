@@ -1,37 +1,198 @@
-#!/usr/bin/env bash
+#!/usr/bin/env  bash
 
-CLICKUP_LOGIN='IE'
+set -o pipefail
+
+pre_config_env=$(mktemp)
+post_config_env=$(mktemp)
+in_makefile=Makefile.in
+out_envfile=.env.default
+out_macrosfile=macros.m4
+out_makefile=Makefile.out
+
+printenv > $pre_config_env
+
+# OPTIONS
+WITH_CLICKUP_TARGET=IE
+WITH_DEPLOY_TARGET=IE_CLOUD
+WITH_GCLOUD_TARGET=PN
+CLICKPIE_SERVER_URL_PUBLIC=
+CLICKPIE_SERVER_URL_LOCAL=
+PREFIX=$(pwd)
+
+
+# VALUES THAT WILL BE PART OF THE CONFIGURATION STAGE ENVIRONMENT OUTPUT
+# --------------------------------------------------------------------------------
+set -o allexport
+
+# App description
+APP_NAME=clickpie-software
+APP_VERSION=0.0.1
+APP_VVERSION=v${APP_VERSION}
+APP_DISTNAME=${APP_NAME}-${APP_VVERSION}
+API_VERSION=1
+API_VVERSION=v${API_VERSION}
+
+# Clickup credentials
+CLICKUP_LOGIN_USERNAME=
+CLICKUP_LOGIN_PASS=
+CLICKUP_LOGIN_AUTH_TOKEN=
+
+# clickpie-server, servicing both UI clients and API clients
+# public url
+CLICKPIE_SERVER_URL_PUBLIC_SCHEME=
+CLICKPIE_SERVER_URL_PUBLIC_PORT=
+CLICKPIE_SERVER_URL_PUBLIC_HOSTNAME=
+CLICKPIE_SERVER_URL_PUBLIC=
+# local url
+CLICKPIE_SERVER_URL_LOCAL_SCHEME=
+CLICKPIE_SERVER_URL_LOCAL_PORT=
+CLICKPIE_SERVER_URL_LOCAL_HOSTNAME=
+CLICKPIE_SERVER_URL_LOCAL=
+# clickpie-api, serviced by clickpie-server
+# public url
+CLICKPIE_API_URL_PUBLIC_SCHEME=
+CLICKPIE_API_URL_PUBLIC_PORT=
+CLICKPIE_API_URL_PUBLIC_HOSTNAME=
+CLICKPIE_API_URL_PUBLIC_URL=
+# local url
+CLICKPIE_API_URL_LOCAL_SCHEME=
+CLICKPIE_API_URL_LOCAL_PORT=
+CLICKPIE_API_URL_LOCAL_HOSTNAME=
+CLICKPIE_API_URL_LOCAL_URL=
+
+set +o allexport
 
 main() {
   parse_args "$@"
   set -- "${POSARGS[@]}"
   debug "Config: $(quote $CONFIG)"
   debug "Clickup login: $(quote $CLICKUP_LOGIN)"
-  echo Configuring...
-  echo Decrypting .secrets
-  gpg --decrypt --quiet ../.secrets.gpg | grep -i $CLICKUP_LOGIN | sed "s/${CLICKUP_LOGIN}_//g" > .env.default
 
-  echo Setting up public domain server...
-  if [[ "${NGROK_URL:-}" == '' ]]; then
-    error 'Missing ngrok dynamic public domain server'
-  else
-    echo "NGROK_URL_PREFIX=$NGROK_URL" >> .env.default
-    echo "CLICKPIE_SERVER_URL_PREFIX=$NGROK_URL" >> .env.default
+
+  echo Configuring...
+
+  echo Decrypting secrets...
+  gpg --decrypt --quiet ../.secrets.gpg > .secrets
+  source .secrets
+
+  echo Resolving --with-clickup-target...$WITH_CLICKUP_TARGET
+  CLICKUP_LOGIN_TARGET=CLICKUP_LOGIN_${WITH_CLICKUP_TARGET}
+  CLICKUP_LOGIN_USERNAME="$(expand "${CLICKUP_LOGIN_TARGET}_USERNAME")"
+  CLICKUP_LOGIN_PASS="$(expand "${CLICKUP_LOGIN_TARGET}_PASS")"
+  CLICKUP_LOGIN_AUTH_TOKEN="$(expand "${CLICKUP_LOGIN_TARGET}_TOKEN")"
+
+  # clickpie-server, servicing both UI clients and API clients
+  # public url
+  echo Resolving --server-public-url..."$CLICKPIE_SERVER_URL_PUBLIC"
+  read -r scheme hostname port < <(parseUrl "$CLICKPIE_SERVER_URL_PUBLIC")
+  if [[ "$scheme" == '' || "$hostname" == '' || "$port" == '' ]]; then
+    error 'clickpie-server public url missing either scheme, hostname or port'
   fi
+  CLICKPIE_SERVER_URL_PUBLIC_SCHEME="$scheme"
+  CLICKPIE_SERVER_URL_PUBLIC_PORT="$port"
+  CLICKPIE_SERVER_URL_PUBLIC_HOSTNAME="$hostname"
+  CLICKPIE_SERVER_URL_PUBLIC_URL="${scheme}"://"${hostname}":"${port}"
+  # local url
+  echo Resolving --server-local-url..."$CLICKPIE_SERVER_URL_LOCAL"
+  read -r scheme hostname port < <(parseUrl "$CLICKPIE_SERVER_URL_LOCAL")
+  if [[ "$scheme" == '' || "$hostname" == '' || "$port" == '' ]]; then
+    error 'clickpie-server local url missing either scheme, hostname or port'
+  fi
+  CLICKPIE_SERVER_URL_LOCAL_SCHEME="$scheme"
+  CLICKPIE_SERVER_URL_LOCAL_PORT="$port"
+  CLICKPIE_SERVER_URL_LOCAL_HOSTNAME="$hostname"
+  CLICKPIE_SERVER_URL_LOCAL_URL="${scheme}"://"${hostname}":"${port}"
+
+  # clickpie-api, serviced by clickpie-server
+  # public url
+  CLICKPIE_API_URL_PUBLIC_SCHEME="${CLICKPIE_SERVER_URL_PUBLIC_SCHEME}"
+  CLICKPIE_API_URL_PUBLIC_PORT="${CLICKPIE_SERVER_URL_PUBLIC_PORT}"
+  CLICKPIE_API_URL_PUBLIC_HOSTNAME="${CLICKPIE_SERVER_URL_PUBLIC_HOSTNAME}"
+  CLICKPIE_API_URL_PUBLIC_URL="${CLICKPIE_API_URL_PUBLIC_SCHEME}"://"${CLICKPIE_API_URL_PUBLIC_HOSTNAME}":"${CLICKPIE_API_URL_PUBLIC_PORT}"
+  # local url
+  CLICKPIE_API_URL_LOCAL_SCHEME="${CLICKPIE_SERVER_URL_LOCAL_SCHEME}"
+  CLICKPIE_API_URL_LOCAL_PORT="${CLICKPIE_SERVER_URL_LOCAL_PORT}"
+  CLICKPIE_API_URL_LOCAL_HOSTNAME="${CLICKPIE_SERVER_URL_LOCAL_HOSTNAME}"
+  CLICKPIE_API_URL_LOCAL_URL="${CLICKPIE_API_URL_LOCAL_SCHEME}"://"${CLICKPIE_API_URL_LOCAL_HOSTNAME}":"${CLICKPIE_API_URL_LOCAL_PORT}"/api/"${API_VVERSION}"
+
+  define_env
+  makefile
+  cleanup
+}
+
+expand() {
+  echo ${!1}
+}
+
+makefile() {
+  echo Generating Makefile...
+  m4 $out_macrosfile $in_makefile > $out_makefile
+}
+
+cleanup() {
+  rm $pre_config_env
+  rm $post_config_env
+}
+
+useparseurl() {
+  read -r scheme hostname port < <(parseUrl "http://localhost:5173")
+  echo $scheme $hostname $port
+}
+
+parseUrl() {
+  url=$1
+  scheme="$(echo "$url" | grep -Eo "^.*://" -)"
+  scheme="${scheme%%:*}"
+  hostname="$(echo "$url" | grep -Eo "(://[a-zA-Z0-9._-]+(:[0-9]+|/|$)|@[a-zA-Z0-9._-]+(:|/|$))")"
+  hostname="${hostname##*/}"
+  hostname="${hostname#*@}"
+  hostname="${hostname%:*}"
+  port="$(echo "$url" | grep -Eo ":[0-9]+(/|$)")"
+  port="${port#*:}"
+  echo "$scheme" "$hostname" "$port"
+}
+
+define_env() {
+  echo Defining environment...
+  printenv > $post_config_env
+  diff --normal $pre_config_env $post_config_env | grep '^>' | cut -c3- | sort > $out_envfile
+  cat <<EOF > $out_macrosfile
+changequote(\`[', \`]')dnl
+EOF
+
+  while IFS='=' read -r key value; do
+    cat <<EOF >> $out_macrosfile
+define([IN_$key], [$value])dnl
+EOF
+  done < $out_envfile
 }
 
 parse_args(){
   declare -ga POSARGS=()
   while (($# > 0)); do
     case "${1:-}" in
-      --with-ngrok=* | --with-ngrok*)
-        NGROK_URL="$(parse_param "$@")" || shift $?
+      -r* | -r=* | --run=* | --run*)
+        command=$(parse_param "$@") || shift $?
+        $command "${@:2}"
+        exit 0
         ;;
-      --with-pn-clickup-login)
-        CLICKUP_LOGIN='PN'
+      --server-public-url=* | --server-public-url*)
+        CLICKPIE_SERVER_URL_PUBLIC="$(parse_param "$@")" || shift $?
         ;;
-      --with-ie-clickup-login)
-        CLICKUP_LOGIN='IE'
+      --server-local-url=* | --server-local-url*)
+        CLICKPIE_SERVER_URL_LOCAL="$(parse_param "$@")" || shift $?
+        ;;
+      --with-clickup-target=* | --with-clickup-target*)
+        WITH_CLICKUP_TARGET="$(parse_param "$@")" || shift $?
+        ;;
+      --with-deploy-target=* | --with-deploy-target*)
+        WITH_DEPLOY_TARGET="$(parse_param "$@")" || shift $?
+        ;;
+      --with-gcloud-target=* | --with-gcloud-target*)
+        WITH_GCLOUD_TARGET="$(parse_param "$@")" || shift $?
+        ;;
+      --prefix=* | --prefix*)
+        PREFIX="$(parse_param "$@")" || shift $?
         ;;
       -C | --config=* | --config*)
         CONFIG="$(parse_param "$@")" || shift $?
@@ -75,9 +236,11 @@ parse_param() {
 
   if (($# == 0)); then
     return $toshift
+    # param = value
   elif [[ "$1" =~ .*=.* ]]; then
     param="${1%%=*}"
     arg="${1#*=}"
+    # param value
   elif [[ "${2-}" =~ ^[^-].+ ]]; then
     param="$1"
     arg="$2"
