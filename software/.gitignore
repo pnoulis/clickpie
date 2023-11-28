@@ -11,14 +11,18 @@ log/
 # ------- Transient files
 *.log
 *.logs
+Makefile
+/macros.m4
 
 # ------- Environment variables
 .env
+.env.*
 .env.*.local
 .env.local
 
 # emacs
 \#*\#
+.#*
 *~
 .pdf-view-restore
 

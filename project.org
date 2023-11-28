@@ -57,5 +57,23 @@ CLOSED: [2023-10-31 Tue 14:14]
 ** TODO implementing propagateStatus
 Webhook -> clickup register URL to handle event
 ** TODO Find out what resource ID refers to in webhook fire event.
+** DONE transfer over targets from Makefile to Makefile.in
+CLOSED: [2023-11-29 Wed 00:21]
+** DONE Rename global MACROS in common/env to match those in .env
+CLOSED: [2023-11-29 Wed 00:51]
+** TODO Check if variables read from include directive in a Mkaefile are inherited by subprocesses.
+** DONE environment variables in envfile should be quoted*
+CLOSED: [2023-11-28 Tue 22:08]
+because they break the build system if they contain special chars
 * Issues
-** Emacs fails to add tabs when indenting rules if the file being parsed in not Makefile (for example, Makefile.in)
+** DONE Emacs fails to add tabs when indenting rules if the file being parsed in not Makefile (for example, Makefile.in)
+CLOSED: [2023-11-28 Tue 21:15]
+
+The .editorconfig file was overriding emacs built-in settings that switch on
+indent-tabs-mode by interpreting Makefiles with extensions such as Makefile.in
+as normal files converting tabs to spaces.
+
+It was fixed with the following .editorconfig rule:
+
+[Makefile.*]
+indent_style = tab

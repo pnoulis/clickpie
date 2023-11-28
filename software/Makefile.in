@@ -1,3 +1,6 @@
+#!/usr/bin/make
+
+# Make config
 SHELL:=/usr/bin/bash
 .SHELLFLAGS:=-o errexit -o pipefail -c -o nounset
 .DEFAULT_GOAL:= all
@@ -6,6 +9,7 @@ SHELL:=/usr/bin/bash
 .SECONDEXPANSION:
 .ONESHELL:
 
+# App description
 APP_NAME=IN_APP_NAME
 APP_VERSION=IN_APP_VERSION
 APP_VVERSION=IN_APP_VVERSION
@@ -13,13 +17,19 @@ APP_DISTNAME=IN_APP_DISTNAME
 API_VERSION=IN_API_VERSION
 API_VVERSION=IN_API_VVERSION
 
-appdir:=.
-appdir_abs:=$(realpath $(appdir))
-srcdir:=$(appdir)/src
-buildir:=$(appdir)/build
-confdir:=$(appdir)/config
+# App directories
+PREFIX=IN_PREFIX
+PKGDIR=IN_PKGDIR
+PKGDIR_ABS=IN_PKGDIR_ABS
+SRCDIR=IN_SRCDIR
+SRCDIR_ABS=IN_SRCDIR_ABS
+BUILDIR=IN_BUILDIR
+BUILDIR_ABS=IN_BUILDIR_ABS
+CACHEDIR=IN_CACHEDIR
+TEMPDIR=IN_TEMPDIR
+CONFDIR=IN_CONFDIR
 
-# Standard Tools
+# Standard commands
 # ------------------------------
 install=/usr/bin/install
 mkdirp:=/usr/bin/mkdir -p
@@ -28,21 +38,54 @@ cp:=/usr/bin/cp
 rm:=/usr/bin/rm
 chmod:=/usr/bin/chmod
 m4:=/usr/bin/m4
-node:=$(HOME)/.nvm/versions/node/v21.1.0/bin/node
+node:=$(HOME)/.nvm/versions/node/v21.0.0/bin/node
 bash:=/usr/bin/bash
 
 # Tools and their configurations
 # ------------------------------
 dotenv:=/home/pnoul/bin/dotenv
-dotenvdirs:=$(confdir)/env/* $(appdir)
+dotenvdirs:=$(CONFDIR)/env/* $(PKGDIR)/.env.*
 dotenvfile:=.env
 loadenv:=set -a; source $(dotenvfile)
-json2csv:=$(appdir)/scripts/json2csv.jq
+json2csv:=$(CONFDIR)/scripts/json2csv.jq
+
+# Misc
+script_commons=$(appdir)/scripts/script-template.sh
+
+all: build
+
+get-workspaces: env
+	$(loadenv)
+	$(bash) ./scripts/get-workspaces.sh $(args)
+
+get-spaces: env
+	$(loadenv)
+	$(bash) ./scripts/get-spaces.sh $(args)
+
+get-folders: env
+	$(loadenv)
+	$(bash) ./scripts/get-folders.sh $(args)
+
+get-lists: env
+	$(loadenv)
+	$(bash) ./scripts/get-lists.sh $(args)
+
+get-webhooks: env
+	$(loadenv)
+	$(bash) ./scripts/get-webhooks.sh $(args)
+
+create-webhook: env
+	$(loadenv)
+	$(bash) ./scripts/create-webhook.sh $(args)
+
+scratch: dotenv
+	$(loadenv)
+	$(node) ./tmp/scratch.js
 
 run: file=
 run: dotenv $(file)
 	@if [[ "$${file:-}" == "" ]]; then
-	echo 'Usage: `make run file [args]`'
+	echo "Usage: 'make run file [args]'"
 	exit 1
 	fi
 	extension="$${file##*.}"
@@ -52,7 +95,7 @@ run: dotenv $(file)
 	;;
 	*)
 	echo "Unrecognized extension: $$extension"
-	echo 'Failed to `make $@ $^`'
+	echo "Failed to 'make $@ $^'"
 	;;
 	esac
 
@@ -62,12 +105,38 @@ run: dotenv $(file)
 	exit 1
 	fi
 
-dotenv: $(dotenvfile)
-  echo yolo
+dotenv:
+	$(dotenv) $(dotenvflags) $(dotenvdirs) | sort > $(dotenvfile)
 
-$(dotenvfile): $(dotenvdirs)
-	$(dotenv) $(DOTENVFLAGS) $^ | sort > $@
+clean:
+	-rm -rdf $(buildir)
+	-rm -rdf *.tar.gz
+	-rm -rdf $(app_distname)*
+	-rm -rdf *.log
+	-rm -rdf $(dotenvfile)
 
-# Local Variables:
-# mode: makefile-gmake
-# End:
+distclean: clean
+	-rm -rdf node_modules
+	-rm -rdf package-lock.json
+
+help:
+	@cat ./Makefile | grep -i --color=auto 'phony' | cut -d ' ' -f2- | tail --lines=+3
+
+# Software development
+.PHONY: run # read dotenvfile and run any file
+.PHONY: scratch # read dotenvfile and run the scratch file
+.PHONY: dotenv # write environment into .env
+.PHONY: build # build application
+# Software distribution
+.PHONY: release # release a new application version
+.PHONY: publish # publish current release to a cloud VCS
+.PHONY: package # package a new built and metadata into a form suitable for distribution
+.PHONY: dist # package the source repo and metadata into a form suitable for distribution
+.PHONY: deploy # deploy the application to the consumer, such as a server
+# Cleaning
+.PHONY: clean # Remove files created by make build, install, package, dist...
+.PHONY: distclean # Remove files created by configure
+# Misc
+.PHONY: help
+.PHONY: all # default target
+.PHONY: get-workspaces get-spaces get-folders get-lists get-webhooks

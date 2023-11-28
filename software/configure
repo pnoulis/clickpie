@@ -1,4 +1,4 @@
-#!/usr/bin/env  bash
+#!/usr/bin/bash
 
 set -o pipefail
 
@@ -7,7 +7,7 @@ post_config_env=$(mktemp)
 in_makefile=Makefile.in
 out_envfile=.env.default
 out_macrosfile=macros.m4
-out_makefile=Makefile.out
+out_makefile=Makefile
 
 printenv > $pre_config_env
 
@@ -15,12 +15,13 @@ printenv > $pre_config_env
 WITH_CLICKUP_TARGET=IE
 WITH_DEPLOY_TARGET=IE_CLOUD
 WITH_GCLOUD_TARGET=PN
-CLICKPIE_SERVER_URL_PUBLIC=
-CLICKPIE_SERVER_URL_LOCAL=
-PREFIX=$(pwd)
+export CLICKPIE_SERVER_URL_PUBLIC=
+export CLICKPIE_SERVER_URL_LOCAL=
+export PREFIX=.
+export LOGLEVEL=debug
 
 
-# VALUES THAT WILL BE PART OF THE CONFIGURATION STAGE ENVIRONMENT OUTPUT
+# EXPORT until set +o allexport
 # --------------------------------------------------------------------------------
 set -o allexport
 
@@ -32,6 +33,21 @@ APP_DISTNAME=${APP_NAME}-${APP_VVERSION}
 API_VERSION=1
 API_VVERSION=v${API_VERSION}
 
+# App directories
+PKGDIR=.
+PKGDIR_ABS=$(pwd)
+SRCDIR=${PKGDIR}/src
+SRCDIR_ABS=${PKGDIR_ABS}/src
+BUILDIR=${PKGDIR}/build
+BUILDIR_ABS=${PKGDIR_ABS}/build
+CACHEDIR=${PREFIX}/var
+TEMPDIR=${PREFIX}/var
+CONFDIR=${PREFIX}/config
+
+# Miscellaneous
+MODE=production
+NODE_ENV=production
+
 # Clickup credentials
 CLICKUP_LOGIN_USERNAME=
 CLICKUP_LOGIN_PASS=
@@ -42,23 +58,21 @@ CLICKUP_LOGIN_AUTH_TOKEN=
 CLICKPIE_SERVER_URL_PUBLIC_SCHEME=
 CLICKPIE_SERVER_URL_PUBLIC_PORT=
 CLICKPIE_SERVER_URL_PUBLIC_HOSTNAME=
-CLICKPIE_SERVER_URL_PUBLIC=
 # local url
 CLICKPIE_SERVER_URL_LOCAL_SCHEME=
 CLICKPIE_SERVER_URL_LOCAL_PORT=
 CLICKPIE_SERVER_URL_LOCAL_HOSTNAME=
-CLICKPIE_SERVER_URL_LOCAL=
 # clickpie-api, serviced by clickpie-server
 # public url
 CLICKPIE_API_URL_PUBLIC_SCHEME=
 CLICKPIE_API_URL_PUBLIC_PORT=
 CLICKPIE_API_URL_PUBLIC_HOSTNAME=
-CLICKPIE_API_URL_PUBLIC_URL=
+CLICKPIE_API_URL_PUBLIC=
 # local url
 CLICKPIE_API_URL_LOCAL_SCHEME=
 CLICKPIE_API_URL_LOCAL_PORT=
 CLICKPIE_API_URL_LOCAL_HOSTNAME=
-CLICKPIE_API_URL_LOCAL_URL=
+CLICKPIE_API_URL_LOCAL=
 
 set +o allexport
 
@@ -72,7 +86,9 @@ main() {
   echo Configuring...
 
   echo Decrypting secrets...
-  gpg --decrypt --quiet ../.secrets.gpg > .secrets
+  if ! gpg --decrypt --quiet ../.secrets.gpg > .secrets; then
+    error 'Failed to decrypt secrets'
+  fi
   source .secrets
 
   echo Resolving --with-clickup-target...$WITH_CLICKUP_TARGET
@@ -125,7 +141,7 @@ expand() {
 }
 
 makefile() {
-  echo Generating Makefile...
+  echo Generating Makefile...$out_makefile
   m4 $out_macrosfile $in_makefile > $out_makefile
 }
 
@@ -153,18 +169,26 @@ parseUrl() {
 }
 
 define_env() {
-  echo Defining environment...
+  printf "Defining environment...'%s'\n" "$out_envfile"
   printenv > $post_config_env
-  diff --normal $pre_config_env $post_config_env | grep '^>' | cut -c3- | sort > $out_envfile
-  cat <<EOF > $out_macrosfile
-changequote(\`[', \`]')dnl
-EOF
+  rm -f $out_envfile
+  local unquoted_envars=$(mktemp)
+  diff --normal $pre_config_env $post_config_env | grep '^>' | cut -c3- | sort > $unquoted_envars
+  while IFS='=' read -r k v; do
+    # Quote values
+    if [[ "$v" =~ \' ]]; then
+      printf "%s=\"%s\"\n" "$k" "$v" >> $out_envfile
+    else
+      printf "%s='%s'\n" "$k" "$v" >> $out_envfile
+    fi
+  done < $unquoted_envars
 
+  rm -f $out_macrosfile
   while IFS='=' read -r key value; do
     cat <<EOF >> $out_macrosfile
-define([IN_$key], [$value])dnl
+define(\`IN_$key', \`$value')dnl
 EOF
-  done < $out_envfile
+  done < $unquoted_envars
 }
 
 parse_args(){
@@ -193,6 +217,9 @@ parse_args(){
         ;;
       --prefix=* | --prefix*)
         PREFIX="$(parse_param "$@")" || shift $?
+        ;;
+      --loglevel=* | --loglevel*)
+        LOGLEVEL="$(parse_param "$@")" || shift $?
         ;;
       -C | --config=* | --config*)
         CONFIG="$(parse_param "$@")" || shift $?
