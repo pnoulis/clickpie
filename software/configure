@@ -49,6 +49,11 @@ CONFDIR=${PREFIX}/config
 MODE=production
 NODE_ENV=production
 
+# Tools
+ESBUILD=${PKGDIR_ABS}/node_modules/.bin/esbuild
+DOTENV=${HOME}/bin/dotenv
+NODE=${HOME}/.nvm/versions/node/v21.0.0/bin/node
+
 # Clickup credentials
 CLICKUP_LOGIN_USERNAME=
 CLICKUP_LOGIN_PASS=
@@ -88,6 +93,9 @@ main() {
 
 
   echo Configuring...
+
+  printf "Installing packages...\n"
+  npm install
 
   printf "Decrypting secrets...|%s\n" "$out_secrets"
   if ! ( [ -f "$out_secrets" ] || gpg --decrypt --quiet "$in_secrets" > "$out_secrets" ); then

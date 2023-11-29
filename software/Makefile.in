@@ -42,8 +42,8 @@ bash:=/usr/bin/bash
 
 # Tools and their configurations
 # ------------------------------
-node:=$(HOME)/.nvm/versions/node/v21.0.0/bin/node
-dotenv:=/home/pnoul/bin/dotenv
+node:=IN_NODE
+dotenv:=IN_DOTENV
 dotenvdirs:=$(CONFDIR)/env/* $(PKGDIR)/.env.*
 dotenvfile:=.env
 loadenv:=set -a; source $(dotenvfile)

@@ -39,8 +39,10 @@ bash:=/usr/bin/bash
 
 # Tools and their configurations
 # ------------------------------
-node:=$(HOME)/.nvm/versions/node/v21.0.0/bin/node
-dotenv:=/home/pnoul/bin/dotenv
+
+node:=IN_NODE
+dotenv:=IN_DOTENV
+esbuild:=IN_ESBUILD
 dotenvdirs:=$(CONFDIR)/env/* $(PKGDIR)/.env.*
 dotenvfile:=.env
 loadenv:=set -a; source $(dotenvfile)
@@ -58,12 +60,12 @@ scratch:
 build:
 
 # Serve
-serve: env
+serve: dotenv
 	$(loadenv)
 ifdef daemon
-	$(node) $(srcdir)/serve.js &
+	$(node) $(SRCDIR)/serve.js &
 else
-	$(node) $(srcdir)/serve.js
+	$(node) $(SRCDIR)/serve.js
 endif
 
 run: file=
