@@ -8,6 +8,8 @@ class Api {
       public: publicUrl instanceof URL ? publicUrl : new URL(publicUrl),
       local: localUrl instanceof URL ? localUrl : new URL(localUrl),
     };
+    log.trace(this.public);
+    log.trace(this.local);
   }
   getWorkspaces({ quiet = false } = {}) {
     return this.clickup
