@@ -5,7 +5,9 @@ set -o pipefail
 pre_config_env=$(mktemp)
 post_config_env=$(mktemp)
 in_makefile=Makefile.in
-out_envfile=.env.default
+in_secrets=../.secrets.gpg
+out_secrets=.secrets
+out_envfile=.env.conf
 out_macrosfile=macros.m4
 out_makefile=Makefile
 
@@ -19,7 +21,6 @@ export CLICKPIE_SERVER_URL_PUBLIC=
 export CLICKPIE_SERVER_URL_LOCAL=
 export PREFIX=.
 export LOGLEVEL=debug
-
 
 # EXPORT until set +o allexport
 # --------------------------------------------------------------------------------
@@ -85,13 +86,13 @@ main() {
 
   echo Configuring...
 
-  echo Decrypting secrets...
-  if ! gpg --decrypt --quiet ../.secrets.gpg > .secrets; then
-    error 'Failed to decrypt secrets'
+  printf "Decrypting secrets...|%s\n" "$out_secrets"
+  if ! ( [ -f "$out_secrets" ] || gpg --decrypt --quiet "$in_secrets" > "$out_secrets" ); then
+    error "Failed to decrypt $in_secrets"
   fi
-  source .secrets
+  source "$out_secrets"
 
-  echo Resolving --with-clickup-target...$WITH_CLICKUP_TARGET
+  printf "Resolving --with-clickup-target...|%s\n" "$WITH_CLICKUP_TARGET"
   CLICKUP_LOGIN_TARGET=CLICKUP_LOGIN_${WITH_CLICKUP_TARGET}
   CLICKUP_LOGIN_USERNAME="$(expand "${CLICKUP_LOGIN_TARGET}_USERNAME")"
   CLICKUP_LOGIN_PASS="$(expand "${CLICKUP_LOGIN_TARGET}_PASS")"
@@ -99,7 +100,7 @@ main() {
 
   # clickpie-server, servicing both UI clients and API clients
   # public url
-  echo Resolving --server-public-url..."$CLICKPIE_SERVER_URL_PUBLIC"
+  printf "Resolving --server-public-url...|%s\n" "$CLICKPIE_SERVER_URL_PUBLIC"
   read -r scheme hostname port < <(parseUrl "$CLICKPIE_SERVER_URL_PUBLIC")
   if [[ "$scheme" == '' || "$hostname" == '' || "$port" == '' ]]; then
     error 'clickpie-server public url missing either scheme, hostname or port'
@@ -109,7 +110,7 @@ main() {
   CLICKPIE_SERVER_URL_PUBLIC_HOSTNAME="$hostname"
   CLICKPIE_SERVER_URL_PUBLIC_URL="${scheme}"://"${hostname}":"${port}"
   # local url
-  echo Resolving --server-local-url..."$CLICKPIE_SERVER_URL_LOCAL"
+  printf "Resolving --server-local-url...|%s\n" "$CLICKPIE_SERVER_URL_LOCAL"
   read -r scheme hostname port < <(parseUrl "$CLICKPIE_SERVER_URL_LOCAL")
   if [[ "$scheme" == '' || "$hostname" == '' || "$port" == '' ]]; then
     error 'clickpie-server local url missing either scheme, hostname or port'
@@ -117,19 +118,19 @@ main() {
   CLICKPIE_SERVER_URL_LOCAL_SCHEME="$scheme"
   CLICKPIE_SERVER_URL_LOCAL_PORT="$port"
   CLICKPIE_SERVER_URL_LOCAL_HOSTNAME="$hostname"
-  CLICKPIE_SERVER_URL_LOCAL_URL="${scheme}"://"${hostname}":"${port}"
+  CLICKPIE_SERVER_URL_LOCAL="${scheme}"://"${hostname}":"${port}"
 
   # clickpie-api, serviced by clickpie-server
   # public url
   CLICKPIE_API_URL_PUBLIC_SCHEME="${CLICKPIE_SERVER_URL_PUBLIC_SCHEME}"
   CLICKPIE_API_URL_PUBLIC_PORT="${CLICKPIE_SERVER_URL_PUBLIC_PORT}"
   CLICKPIE_API_URL_PUBLIC_HOSTNAME="${CLICKPIE_SERVER_URL_PUBLIC_HOSTNAME}"
-  CLICKPIE_API_URL_PUBLIC_URL="${CLICKPIE_API_URL_PUBLIC_SCHEME}"://"${CLICKPIE_API_URL_PUBLIC_HOSTNAME}":"${CLICKPIE_API_URL_PUBLIC_PORT}"
+  CLICKPIE_API_URL_PUBLIC="${CLICKPIE_API_URL_PUBLIC_SCHEME}"://"${CLICKPIE_API_URL_PUBLIC_HOSTNAME}":"${CLICKPIE_API_URL_PUBLIC_PORT}"/api/"${API_VVERSION}"
   # local url
   CLICKPIE_API_URL_LOCAL_SCHEME="${CLICKPIE_SERVER_URL_LOCAL_SCHEME}"
   CLICKPIE_API_URL_LOCAL_PORT="${CLICKPIE_SERVER_URL_LOCAL_PORT}"
   CLICKPIE_API_URL_LOCAL_HOSTNAME="${CLICKPIE_SERVER_URL_LOCAL_HOSTNAME}"
-  CLICKPIE_API_URL_LOCAL_URL="${CLICKPIE_API_URL_LOCAL_SCHEME}"://"${CLICKPIE_API_URL_LOCAL_HOSTNAME}":"${CLICKPIE_API_URL_LOCAL_PORT}"/api/"${API_VVERSION}"
+  CLICKPIE_API_URL_LOCAL="${CLICKPIE_API_URL_LOCAL_SCHEME}"://"${CLICKPIE_API_URL_LOCAL_HOSTNAME}":"${CLICKPIE_API_URL_LOCAL_PORT}"/api/"${API_VVERSION}"
 
   define_env
   makefile
@@ -141,7 +142,7 @@ expand() {
 }
 
 makefile() {
-  echo Generating Makefile...$out_makefile
+  printf "Generating Makefile...|%s\n" "$out_makefile"
   m4 $out_macrosfile $in_makefile > $out_makefile
 }
 
@@ -169,7 +170,7 @@ parseUrl() {
 }
 
 define_env() {
-  printf "Defining environment...'%s'\n" "$out_envfile"
+  printf "Defining environment...|%s\n" "$out_envfile"
   printenv > $post_config_env
   rm -f $out_envfile
   local unquoted_envars=$(mktemp)

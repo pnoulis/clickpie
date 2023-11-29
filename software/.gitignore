@@ -13,6 +13,7 @@ log/
 *.logs
 Makefile
 /macros.m4
+*.out
 
 # ------- Environment variables
 .env
