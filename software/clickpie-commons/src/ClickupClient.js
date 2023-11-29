@@ -1,11 +1,16 @@
 import { Http } from "./Http.js";
+import {
+  CLICKUP_LOGIN_AUTH_TOKEN,
+  CLICKUP_API_URL,
+  CLICKUP_LOGIN_USERNAME,
+} from "./env.js";
 
-function ClickupClient({ url, authToken, username } = {}) {
+function getClickupClient() {
   return new Http({
-    username,
-    url,
-    authToken,
+    username: CLICKUP_LOGIN_USERNAME,
+    authToken: CLICKUP_LOGIN_AUTH_TOKEN,
+    url: CLICKUP_API_URL,
   });
 }
 
-export { ClickupClient };
+export { getClickupClient };
