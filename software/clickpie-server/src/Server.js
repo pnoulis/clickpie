@@ -1,22 +1,22 @@
 import { default as Koa } from "koa";
 import { koaBody } from "koa-body";
-import { router } from "./router.js";
 import { URL } from "node:url";
-
+import { createApiRoutes } from "./api-routes.js";
 class Server {
-  constructor({ port, publicUrl, localUrl } = {}) {
-    this.public = publicUrl instanceof URL ? publicUrl : new URL(publicUrl);
-    this.local = localUrl instanceof URL ? localUrl : new URL(localUrl);
-    this.public.port ||= port;
-    this.local.port ||= port;
+  constructor({ publicUrl, localUrl, api } = {}) {
+    this.url = {
+      public: publicUrl instanceof URL ? publicUrl : new URL(publicUrl),
+      local: localUrl instanceof URL ? localUrl : new URL(localUrl),
+    };
+    this.api = api;
     log.trace(this.public);
     log.trace(this.local);
   }
 }
 
 Server.prototype.start = async function () {
-  if (!this.local.port) {
-    throw new Error(`Port '${this.local.port}' is not a valid PORT`);
+  if (!this.url.local.port) {
+    throw new Error(`Port '${this.url.local.port}' is not a valid PORT`);
   }
   this.server = new Koa();
 
@@ -52,10 +52,10 @@ Server.prototype.start = async function () {
       ctx.status = 500;
     }
   });
-  this.server.use(router.routes());
+  this.server.use(createApiRoutes(this.api));
 
-  this.server.listen(this.local.port, () =>
-    log.info(`Server listening on port: ${this.local.port}`),
+  this.server.listen(this.url.local.port, () =>
+    log.info(`Server listening at port: ${this.url.local.port}`),
   );
 };
 

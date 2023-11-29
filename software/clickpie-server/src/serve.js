@@ -1,12 +1,19 @@
-import { env, log } from "clickpie-commons";
+import * as env from "clickpie-commons/env";
+import { getClickupClient } from "clickpie-commons/ClickupClient";
+import { log } from 'clickpie-commons/log';
+import { Api } from "clickpie-api";
 import { Server } from "./Server.js";
 
-globalThis.log = log;
+const api = new Api({
+  clickupClient: getClickupClient(),
+  publicUrl: env.CLICKPIE_API_URL_PUBLIC,
+  localUrl: env.CLICKPIE_API_URL_LOCAL,
+});
 
 const server = new Server({
-  port: env.PORT,
-  publicUrl: env.CLICKPIE_SERVER_URL_PREFIX,
-  localUrl: "http://localhost",
+  publicUrl: env.CLICKPIE_SERVER_URL_PUBLIC,
+  localUrl: env.CLICKPIE_SERVER_URL_LOCAL,
+  api,
 });
 
 try {
