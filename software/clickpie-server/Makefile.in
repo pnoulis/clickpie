@@ -61,12 +61,15 @@ build:
 
 # Serve
 serve: dotenv
-	$(loadenv)
-ifdef daemon
-	$(node) $(SRCDIR)/serve.js &
-else
-	$(node) $(SRCDIR)/serve.js
-endif
+	$(esbuild) $(SRCDIR)/serve.js --bundle --outfile=out.js --platform=node \
+	--packages=external --target=esnext --format=esm --watch
+
+watch:
+	inotifywait --monitor --event close out.js | while read -r change
+	do
+	echo $$change
+	done
+
 
 run: file=
 run: dotenv $(file)
