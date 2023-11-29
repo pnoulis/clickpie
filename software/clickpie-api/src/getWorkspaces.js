@@ -1,3 +1,0 @@
-function getWorkspaces() {
-  this.get()
-}
