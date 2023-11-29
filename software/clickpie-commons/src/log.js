@@ -3,4 +3,6 @@ import { LOGLEVEL } from './env.js';
 
 const log = new ConsoleLogger({ logLevel: LOGLEVEL });
 
+globalThis.log = log;
+
 export { log };
