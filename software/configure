@@ -54,6 +54,9 @@ CLICKUP_LOGIN_USERNAME=
 CLICKUP_LOGIN_PASS=
 CLICKUP_LOGIN_AUTH_TOKEN=
 
+# Clickup API url
+CLICKUP_API_URL='https://api.clickup.com/api/v2'
+
 # clickpie-server, servicing both UI clients and API clients
 # public url
 CLICKPIE_SERVER_URL_PUBLIC_SCHEME=
