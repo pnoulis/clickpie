@@ -1,25 +1,29 @@
+import { URL } from "node:url";
 import { ERR_INVALID_ARG_VALUE } from "clickpie-commons/err";
 
 class Api {
-  constructor({ clickupClient, webhookUrl } = {}) {
+  constructor({ clickupClient, publicUrl, localUrl } = {}) {
     this.clickup = clickupClient;
-    this.webhookUrl = webhookUrl;
+    this.url = {
+      public: publicUrl instanceof URL ? publicUrl : new URL(publicUrl),
+      local: localUrl instanceof URL ? localUrl : new URL(localUrl),
+    };
   }
   getWorkspaces({ quiet = false } = {}) {
     return this.clickup
       .get("/team")
       .then((res) => (res.teams?.length < 1 ? [] : res.teams))
-      .then((wss) => (quiet ? wss.map((ws) => ws.id) : wss));
+      .then((ww) => (quiet ? ww.map((w) => w.id) : ww));
   }
   getHooks({ quiet = false } = {}) {
     return this.getWorkspaces({ quiet: true })
-      .then((wss) =>
+      .then((ww) =>
         Promise.all(
-          wss.map((workid) => this.clickup.get(`/team/${workid}/webhook`)),
+          ww.map((workid) => this.clickup.get(`/team/${workid}/webhook`)),
         ),
       )
-      .then((wss) => wss.map((ws) => ws.webhooks).flat())
-      .then((hooks) => (quiet ? hooks.map((hook) => hook.id) : hooks));
+      .then((ww) => ww.map((w) => w.webhooks).flat())
+      .then((hh) => (quiet ? hh.map((h) => h.id) : hh));
   }
   createHook({ name, events, workid, ...options } = {}) {
     const params = {
@@ -31,7 +35,7 @@ class Api {
     };
     if (!name) throw new ERR_INVALID_ARG_VALUE("name", name);
     else if (!workid) throw new ERR_INVALID_ARG_VALUE("workid", workid);
-    const hookend = this.webhookUrl + "/" + name;
+    const hookend = this.url.public.href + "/webhooks/" + name;
     log.debug(`create hook: ${hookend}`);
   }
 }
