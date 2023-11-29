@@ -109,15 +109,18 @@ dotenv:
 	$(dotenv) $(dotenvflags) $(dotenvdirs) | sort > $(dotenvfile)
 
 clean:
-	-rm -rdf $(buildir)
-	-rm -rdf *.tar.gz
-	-rm -rdf $(app_distname)*
-	-rm -rdf *.log
-	-rm -rdf $(dotenvfile)
+	-rm -f *.tar.gz
+	-rm -f *.log
+	-rm -rf build
+	-rm -rf dist
+	-rm -f $(dotenvfile)
 
 distclean: clean
 	-rm -rdf node_modules
-	-rm -rdf package-lock.json
+	-rm -f package-lock.json
+	-rm -f macros.m4
+	-rm -f .env*
+	-rm -f .secrets
 
 help:
 	@cat ./Makefile | grep -i --color=auto 'phony' | cut -d ' ' -f2- | tail --lines=+3

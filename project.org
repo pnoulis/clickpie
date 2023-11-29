@@ -77,3 +77,43 @@ It was fixed with the following .editorconfig rule:
 
 [Makefile.*]
 indent_style = tab
+
+* Standard Identifiers  across the project
+** workid
+** spacid
+** foldid
+** listid
+** taskid
+** hookid
+** workname
+** spacname
+** foldname
+** listname
+** taskname
+** hookname
+** hookend
+hook endpoint
+** ww
+workspaces
+** w
+workspace
+** ss
+spaces
+** s
+space
+** ff
+folders
+** f
+folder
+** ll
+lists
+** l
+list
+** tt
+tasks
+** t
+task
+** hh
+hooks
+** h
+hook
