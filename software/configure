@@ -134,6 +134,7 @@ main() {
 
   define_env
   makefile
+  configure_clickpie_server
   cleanup
 }
 
@@ -144,6 +145,22 @@ expand() {
 makefile() {
   printf "Generating Makefile...|%s\n" "$out_makefile"
   m4 $out_macrosfile $in_makefile > $out_makefile
+}
+
+configure_clickpie_server() {
+  printf "Configuring clickpie-server...\n"
+  cd clickpie-server || exit 1
+  PKGDIR=.
+  PKGDIR_ABS=$(pwd)
+  SRCDIR=${PKGDIR}/src
+  SRCDIR_ABS=${PKGDIR_ABS}/src
+  BUILDIR=${PKGDIR}/build
+  BUILDIR_ABS=${PKGDIR_ABS}/build
+  CACHEDIR=${PREFIX}/var
+  TEMPDIR=${PREFIX}/var
+  CONFDIR=${PREFIX}/config
+  define_env
+  makefile
 }
 
 cleanup() {

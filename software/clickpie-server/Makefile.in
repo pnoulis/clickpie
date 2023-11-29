@@ -2,20 +2,17 @@
 
 # Make config
 SHELL:=/usr/bin/bash
-.SHELLFLAGS:=-o errexit -o pipefail -c -o nounset
-.DEFAULT_GOAL:= all
-.DELETE_OR_ERROR:
+.DEFAULT_GOAL:=all
+.DELETE_ON_ERROR:
 .EXPORT_ALL_VARIABLES:
 .SECONDEXPANSION:
 .ONESHELL:
 
 # App description
-APP_NAME=IN_APP_NAME
-APP_VERSION=IN_APP_VERSION
-APP_VVERSION=IN_APP_VVERSION
-APP_DISTNAME=IN_APP_DISTNAME
-API_VERSION=IN_API_VERSION
-API_VVERSION=IN_API_VVERSION
+app_name:=clickpie-server
+app_version:=0.0.1
+app_vversion:=v$(app_version)
+app_distname:=$(app_name)-$(app_vversion)
 
 # App directories
 PREFIX=IN_PREFIX
@@ -49,38 +46,25 @@ dotenvfile:=.env
 loadenv:=set -a; source $(dotenvfile)
 json2csv:=$(CONFDIR)/scripts/json2csv.jq
 
-# Misc
-script_commons=$(PKGDIR)/scripts/script-template.sh
 
 all: build
 
-get-workspaces: dotenv
+# Scratch
+scratch:
 	$(loadenv)
-	$(bash) ./scripts/get-workspaces.sh $(args)
+	$(node) tmp/scratch.js
 
-get-spaces: dotenv
-	$(loadenv)
-	$(bash) ./scripts/get-spaces.sh $(args)
+# Build
+build:
 
-get-folders: dotenv
+# Serve
+serve: env
 	$(loadenv)
-	$(bash) ./scripts/get-folders.sh $(args)
-
-get-lists: dotenv
-	$(loadenv)
-	$(bash) ./scripts/get-lists.sh $(args)
-
-get-webhooks: dotenv
-	$(loadenv)
-	$(bash) ./scripts/get-webhooks.sh $(args)
-
-create-webhook: dotenv
-	$(loadenv)
-	$(bash) ./scripts/create-webhook.sh $(args)
-
-scratch: dotenv
-	$(loadenv)
-	$(node) ./tmp/scratch.js
+ifdef daemon
+	$(node) $(srcdir)/serve.js &
+else
+	$(node) $(srcdir)/serve.js
+endif
 
 run: file=
 run: dotenv $(file)
@@ -113,10 +97,9 @@ dotenv:
 	$(dotenv) $(dotenvflags) $(dotenvdirs) | sort > $(dotenvfile)
 
 clean:
-	-rm -f *.tar.gz
-	-rm -f *.log
 	-rm -rf build
 	-rm -rf dist
+	-rm -f *.log
 	-rm -f $(dotenvfile)
 
 distclean: clean
@@ -124,26 +107,20 @@ distclean: clean
 	-rm -f package-lock.json
 	-rm -f macros.m4
 	-rm -f .env*
-	-rm -f .secrets
 
 help:
 	@cat ./Makefile | grep -i --color=auto 'phony' | cut -d ' ' -f2- | tail --lines=+3
 
+.PHONY: help
+# General setup of the repository
+.PHONY: all # build application
 # Software development
+.PHONY: serve # serve service
 .PHONY: run # read dotenvfile and run any file
 .PHONY: scratch # read dotenvfile and run the scratch file
 .PHONY: dotenv # write environment into .env
 .PHONY: build # build application
-# Software distribution
-.PHONY: release # release a new application version
-.PHONY: publish # publish current release to a cloud VCS
-.PHONY: package # package a new built and metadata into a form suitable for distribution
-.PHONY: dist # package the source repo and metadata into a form suitable for distribution
-.PHONY: deploy # deploy the application to the consumer, such as a server
 # Cleaning
 .PHONY: clean # Remove files created by make build, install, package, dist...
 .PHONY: distclean # Remove files created by configure
-# Misc
-.PHONY: help
-.PHONY: all # default target
-.PHONY: get-workspaces get-spaces get-folders get-lists get-webhooks
+# Miscellaenous
