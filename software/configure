@@ -21,6 +21,7 @@ export CLICKPIE_SERVER_URL_PUBLIC=
 export CLICKPIE_SERVER_URL_LOCAL=
 export PREFIX=.
 export LOGLEVEL=debug
+SKIP_NPM_INSTALL=false
 
 # EXPORT until set +o allexport
 # --------------------------------------------------------------------------------
@@ -94,8 +95,13 @@ main() {
 
   echo Configuring...
 
-  printf "Installing packages...\n"
-  npm install
+  printf "Installing packages..."
+  if flag SKIP_NPM_INSTALL; then
+    echo SKIP
+  else
+    npm install
+    echo INSTALLED
+  fi
 
   printf "Decrypting secrets...|%s\n" "$out_secrets"
   if ! ( [ -f "$out_secrets" ] || gpg --decrypt --quiet "$in_secrets" > "$out_secrets" ); then
@@ -156,6 +162,17 @@ expand() {
 makefile() {
   printf "Generating Makefile...|%s\n" "$out_makefile"
   m4 $out_macrosfile $in_makefile > $out_makefile
+}
+
+flag() {
+  local f="${!1:-}"
+  if [ "$f" == '' ]; then
+    error "Undefined flag: $1"
+  elif [ "$f" == true ]; then
+    return 0
+  else
+    return 1
+  fi
 }
 
 configure_clickpie_server() {
@@ -228,6 +245,9 @@ parse_args(){
         command=$(parse_param "$@") || shift $?
         $command "${@:2}"
         exit 0
+        ;;
+      --skip-npm-install)
+        SKIP_NPM_INSTALL=true
         ;;
       --server-public-url=* | --server-public-url*)
         CLICKPIE_SERVER_URL_PUBLIC="$(parse_param "$@")" || shift $?
