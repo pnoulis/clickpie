@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 
+
 ./configure --mode=development \
+            --skip-npm-install \
             --with-clickup-target=PN \
             --server-public-url=https://6db5-94-154-134-13.ngrok-free.app:80 \
             --server-local-url=http://localhost:5173

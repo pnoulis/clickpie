@@ -47,8 +47,8 @@ TEMPDIR=${PREFIX}/var
 CONFDIR=${PREFIX}/config
 
 # Miscellaneous
-MODE=production
-NODE_ENV=production
+MODE=development
+NODE_ENV=
 
 # Tools
 ESBUILD=${PKGDIR_ABS}/node_modules/.bin/esbuild
@@ -92,15 +92,18 @@ main() {
   debug "Config: $(quote $CONFIG)"
   debug "Clickup login: $(quote $CLICKUP_LOGIN)"
 
-
-  echo Configuring...
+  NODE_ENV="$MODE"
+  printf "Configuring...|%s\n" "$MODE"
 
   printf "Installing packages..."
+  log_npm_install=$(mktemp)
   if flag SKIP_NPM_INSTALL; then
     echo SKIP
   else
-    npm install
-    echo INSTALLED
+    npm install &> $log_npm_install
+    printf "INSTALLED\n"
+    cat $log_npm_install
+    rm -f $log_npm_install
   fi
 
   printf "Decrypting secrets...|%s\n" "$out_secrets"
@@ -245,6 +248,9 @@ parse_args(){
         command=$(parse_param "$@") || shift $?
         $command "${@:2}"
         exit 0
+        ;;
+      --mode=* | --mode* | -m)
+        MODE="$(parse_param "$@")" || shift $?
         ;;
       --skip-npm-install)
         SKIP_NPM_INSTALL=true
