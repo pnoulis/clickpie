@@ -61,15 +61,50 @@ build:
 
 # Serve
 serve: dotenv
-	$(esbuild) $(SRCDIR)/serve.js --bundle --outfile=out.js --platform=node \
-	--packages=external --target=esnext --format=esm --watch
+	@PATH=$(PKGDIR):$(PATH)
+ifndef inotify
+	rm -f server.log
+	[ ! -h clickpie-server-bundler ] && ln -sr -T $(esbuild) clickpie-server-bundler
+	[ ! -h clickpie-server-reloader ] && ln -s -T /usr/bin/inotifywait clickpie-server-reloader
 
-watch:
-	inotifywait --monitor --event close out.js | while read -r change
-	do
-	echo $$change
+	clickpie-server-bundler \
+	$(SRCDIR)/clickpie-server.js --bundle --outdir=$(BUILDIR) \
+	--platform=node --packages=external --target=esnext --format=esm --watch=forever &>> server.log &
+
+	clickpie-server-reloader \
+	--monitor --event close $(BUILDIR)/clickpie-server.js -q | while read -r change; do
+	echo [inotify] clickpie-server-bundler $$change
+	make serve inotify=true --silent &
+	done &>> server.log &
+	exit 0
+endif
+	[ ! -h clickpie-server ] && ln -s -T $(node) clickpie-server
+	$(loadenv)
+	echo from notify
+	old_server=$$(ps -o command -o pid | grep ^clickpie-server[[:space:]] | cut -d' ' -f-3  --complement)
+	if [[ "$$old_server" != "" ]]; then
+	echo removing old server $$old_server
+	kill $$old_server
+	kill pgrep --full clickpie-server-reloader
+	fi
+	sleep 2
+	clickpie-server $(BUILDIR)/clickpie-server.js &
+	clickpie-server-reloader \
+	--monitor --event close $(BUILDIR)/clickpie-server.js -q | while read -r change; do
+	echo [inotify] clickpie-server-bundler $$change
+	make serve inotify=true --silent &
+	done &>> server.log &
+	exit 0
+# $(loadenv)
+# kill $$(pgrep --full clickpie-exec)
+# clickpie-exec $(BUILDIR)/clickpie-server.js &
+# exit 0
+
+stop:
+	@for proc in $$(pgrep clickpie-server); do
+	echo $$proc
+	kill $$proc
 	done
-
 
 run: file=
 run: dotenv $(file)
