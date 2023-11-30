@@ -17,15 +17,31 @@ printenv > $pre_config_env
 WITH_CLICKUP_TARGET=IE
 WITH_DEPLOY_TARGET=IE_CLOUD
 WITH_GCLOUD_TARGET=PN
+BUILDIR_STEM=build
+SKIP_NPM_INSTALL=false
 export CLICKPIE_SERVER_URL_PUBLIC=
 export CLICKPIE_SERVER_URL_LOCAL=
-export PREFIX=.
 export LOGLEVEL=debug
-SKIP_NPM_INSTALL=false
+export PREFIX=
+export EXEC_PREFIX=
+export BINDIR=
+export SBINDIR=
+export LIBEXECDIR=
+export DATAROOTDIR=
+export DATADIR=
+export SYSCONFDIR=
+export SHAREDSTATEDIR=
+export LOCALSTATEDIR=
+export RUNSTATEDIR=
+export INCLUDEDIR=
+export DOCDIR=
+export LIBDIR=
+export LOCALEDIR=
 
 # EXPORT until set +o allexport
 # --------------------------------------------------------------------------------
 set -o allexport
+
 
 # App description
 APP_NAME=clickpie-software
@@ -93,7 +109,47 @@ main() {
   debug "Clickup login: $(quote $CLICKUP_LOGIN)"
 
   NODE_ENV="$MODE"
-  printf "Configuring...|%s\n" "$MODE"
+  printf "Configuring...\n"
+  printf "Resolving --mode...|%s\n" "$MODE"
+
+  define_pkgdirs
+
+  printf "Checking dependency...|node-v21.0.0...|"
+  __node_path="$(command -v node)"
+  [[ -z "$__node_path" ]] && {
+    echo MISSING
+    exit 1
+  }
+  __node_version="$(node --version)"
+  [[ "$__node_version" != "v21.0.0" ]] && {
+    echo MISSING
+    exit 1
+  }
+  echo "$__node_path"
+
+  printf "Checking dependency...|make...|"
+  if ! command -v make; then
+    echo MISSING
+    exit 1
+  fi
+
+  printf "Checking dependency...|jq...|"
+  if ! command -v jq; then
+    echo MISSING
+    exit 1
+  fi
+
+  printf "Checking dependency...|inotifywait...|"
+  if ! command -v inotifywait; then
+    echo MISSING
+    exit 1
+  fi
+
+  printf "Checking dependency...|dotenv...|"
+  if ! command -v dotenv; then
+    echo MISSING
+    exit 1
+  fi
 
   printf "Installing packages..."
   log_npm_install=$(mktemp)
@@ -152,10 +208,82 @@ main() {
   CLICKPIE_API_URL_LOCAL_HOSTNAME="${CLICKPIE_SERVER_URL_LOCAL_HOSTNAME}"
   CLICKPIE_API_URL_LOCAL="${CLICKPIE_API_URL_LOCAL_SCHEME}"://"${CLICKPIE_API_URL_LOCAL_HOSTNAME}":"${CLICKPIE_API_URL_LOCAL_PORT}"/api/"${API_VVERSION}"
 
+  define_installdirs
+  define_derivedir
   define_env
   makefile
   configure_clickpie_server
   cleanup
+}
+
+define_pkgdirs() {
+  printf "Resolving package directories...\n"
+  declare -gx CONFIGUREDIR_ABS="$(pwd)"
+  echo "CONFIGUREDIR_ABS...|$CONFIGUREDIR_ABS"
+  declare -gx CONFIGUREDIR="$(realpath -e --relative-to="$PKGDIR_ABS" "$CONFIGUREDIR_ABS")"
+  echo "CONFIGUREDIR...|$CONFIGUREDIR"
+  declare -gx PKGDIR_ABS="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" 2>/dev/null && pwd)"
+  echo "PKGDIR_ABS...|$PKGDIR_ABS"
+  declare -gx PKGDIR="$(realpath --relative-to="$CONFIGUREDIR_ABS" "$PKGDIR_ABS")"
+  echo "PKGDIR...|$PKGDIR"
+  echo "BUILDIR_STEM...|$BUILDIR_STEM"
+  declare -gx BUILDIR_ABS="${CONFIGUREDIR_ABS}/$BUILDIR_STEM"
+  echo "BUILDIR_ABS...|$BUILDIR_ABS"
+  declare -gx BUILDIR="$(realpath -m --relative-to="$CONFIGUREDIR_ABS" "$BUILDIR_ABS")"
+  echo "BUILDIR...|$BUILDIR"
+}
+
+define_installdirs() {
+  printf "Resolving installation directories...\n"
+  isempty PREFIX && PREFIX="$(pwd)"
+  echo "PREFIX...|$(realpath -m --relative-to=. $PREFIX)"
+  isempty EXEC_PREFIX && EXEC_PREFIX="$PREFIX"
+  echo "EXEC_PREFIX...|$(realpath -m --relative-to=. $EXEC_PREFIX)"
+  isempty BINDIR && BINDIR="${EXEC_PREFIX}/bin"
+  echo "BINDIR...|$(realpath -m --relative-to=. $BINDIR)"
+  isempty SBINDIR && SBINDIR="${EXEC_PREFIX}/sbin"
+  echo "SBINDIR...|$(realpath -m --relative-to=. $SBINDIR)"
+  isempty LIBEXECDIR && LIBEXECDIR="${EXEC_PREFIX}/libexec"
+  echo "LIBEXECDIR...|$(realpath -m --relative-to=. $LIBEXECDIR)"
+  isempty DATAROOTDIR && DATAROOTDIR="${PREFIX}/share"
+  echo "DATAROOTDIR...|$(realpath -m --relative-to=. $DATAROOTDIR)"
+  isempty DATADIR && DATADIR="${DATAROOTDIR}/${APP_NAME}"
+  echo "DATADIR...|$(realpath -m --relative-to=. $DATADIR)"
+  isempty SYSCONFDIR && SYSCONFDIR="${PREFIX}/etc"
+  echo "SYSCONFDIR...|$(realpath -m --relative-to=. $SYSCONFDIR)"
+  isempty SHAREDSTATEDIR && SHAREDSTATEDIR="${PREFIX}/com"
+  echo "SHAREDSTATEDIR...|$(realpath -m --relative-to=. $SHAREDSTATEDIR)"
+
+  # GNU standard
+  isempty LOCALSTATEDIR && LOCALSTATEDIR="${PREFIX}/var"
+  # De facto
+  LOCALSTATEDIR=/var/lib/${APP_NAME}
+  echo "LOCALSTATEDIR...|$(realpath -m --relative-to=. $LOCALSTATEDIR)"
+
+  # GNU standard
+  isempty RUNSTATEDIR && RUNSTATEDIR="${LOCALSTATEDIR}/run"
+  # De facto
+  RUNSTATEDIR=/run
+  echo "RUNSTATEDIR...|$(realpath -m --relative-to=. $RUNSTATEDIR)"
+
+  isempty INCLUDEDIR && INCLUDEDIR="${PREFIX}/include"
+  echo "INCLUDEDIR...|$(realpath -m --relative-to=. $INCLUDEDIR)"
+  isempty DOCDIR && DOCDIR="${DATAROOTDIR}/doc/${APP_NAME}"
+  echo "DOCDIR...|$(realpath -m --relative-to=. $DOCDIR)"
+  isempty LIBDIR && LIBDIR="${LIBEXECDIR}/lib"
+  echo "LIBDIR...|$(realpath -m --relative-to=. $LIBDIR)"
+}
+
+define_derivedirs() {
+  # https://wiki.debian.org/Multiarch/Tuples
+  # https://man.archlinux.org/man/file-hierarchy.7
+  # https://wiki.debian.org/Multiarch/Tuples
+  # https://man.archlinux.org/man/systemd-path.1.en
+  declare -gx LOGDIR
+  declare -gx CACHEDIR
+  declare -gx SPOOLDIR
+  declare -gx SKELCONFDIR=/usr/share/factory/etc
+  echo 0
 }
 
 expand() {
@@ -172,6 +300,15 @@ flag() {
   if [ "$f" == '' ]; then
     error "Undefined flag: $1"
   elif [ "$f" == true ]; then
+    return 0
+  else
+    return 1
+  fi
+}
+
+isempty() {
+  local v="${!1:-}"
+  if [ "$v" == "" ]; then
     return 0
   else
     return 1
@@ -251,6 +388,9 @@ parse_args(){
         ;;
       --mode=* | --mode* | -m)
         MODE="$(parse_param "$@")" || shift $?
+        ;;
+      --buildir-stem=* | --buildir-stem)
+        BUILDIR_STEM="$(parse_param "$@")" || shift $?
         ;;
       --skip-npm-install)
         SKIP_NPM_INSTALL=true

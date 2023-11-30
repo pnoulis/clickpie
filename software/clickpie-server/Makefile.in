@@ -74,11 +74,29 @@ ifndef inotify
 	clickpie-server-reloader \
 	--monitor --event close $(BUILDIR)/clickpie-server.js -q | while read -r change; do
 	echo [inotify] clickpie-server-bundler $$change
+
+	echo [inotify] checking checksum
+	if [ ! -f $(BUILDIR)/sha256.txt ]; then
+	echo No sha256.txt file!
+	sha256sum -t $(BUILDIR)/clickpie-server.js > sha256.txt
+	echo checksum generated!
+	exit 0
+	elif ! sha256sum -c $(BUILDIR)/sha256.txt; then
+	echo Contents have indeed changed!
+	echo i should restart the server.
+	exit 0
+	fi
+	exit 0
+	if ! sha256sum -c $(BUILDIR)/sha256.txt; then
+	echo Contents have indeed changed
+	fi
+	fi
 	make serve inotify=true --silent &
 	done &>> server.log &
 	exit 0
 endif
 	[ ! -h clickpie-server ] && ln -s -T $(node) clickpie-server
+	exit 0
 	$(loadenv)
 	echo from notify
 	old_server=$$(ps -o command -o pid | grep ^clickpie-server[[:space:]] | cut -d' ' -f-3  --complement)

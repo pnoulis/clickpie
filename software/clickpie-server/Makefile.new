@@ -1,0 +1,185 @@
+#!/usr/bin/make
+
+# Make config
+SHELL:=/usr/bin/bash
+.DEFAULT_GOAL:=all
+.DELETE_ON_ERROR:
+.EXPORT_ALL_VARIABLES:
+.SECONDEXPANSION:
+.ONESHELL:
+
+# App description
+app_name:=clickpie-server
+app_version:=0.0.1
+app_vversion:=v$(app_version)
+app_distname:=$(app_name)-$(app_vversion)
+
+# App directories
+PREFIX=.
+PKGDIR=.
+PKGDIR_ABS=/home/pnoul/projects/intelligent_entertainment/clickpie/software/clickpie-server
+SRCDIR=./src
+SRCDIR_ABS=/home/pnoul/projects/intelligent_entertainment/clickpie/software/clickpie-server/src
+BUILDIR=./build
+BUILDIR_ABS=/home/pnoul/projects/intelligent_entertainment/clickpie/software/clickpie-server/build
+CACHEDIR=./var
+TEMPDIR=./var
+CONFDIR=./config
+LOGDIR=../var
+LOGDIR_ABS=/home/pnoul/projects/intelligent_entertainment/clickpie/software/clickpie-server/
+
+# Standard commands
+# ------------------------------
+install=/usr/bin/install
+mkdirp:=/usr/bin/mkdir -p
+sort:=/usr/bin/sort
+cp:=/usr/bin/cp
+rm:=/usr/bin/rm
+chmod:=/usr/bin/chmod
+m4:=/usr/bin/m4
+bash:=/usr/bin/bash
+
+# Tools and their configurations
+# ------------------------------
+inotifywait=/usr/bin/inotifywait
+node:=/home/pnoul/.nvm/versions/node/v21.0.0/bin/node
+dotenv:=/home/pnoul/bin/dotenv
+esbuild:=/home/pnoul/projects/intelligent_entertainment/clickpie/software/node_modules/.bin/esbuild
+dotenvdirs:=$(CONFDIR)/env/* $(PKGDIR)/.env.*
+dotenvfile:=$(SRCDIR_ABS)/.env
+loadenv:=set -a; source $(dotenvfile)
+json2csv:=$(CONFDIR)/scripts/json2csv.jq
+
+
+all: build
+
+# Scratch
+scratch:
+	$(loadenv)
+	$(node) tmp/scratch.js
+
+# Build
+build: buildclean
+	$(esbuild) --bundle $(SRCDIR)/clickpie-server.js --outdir=$(BUILDIR) \
+	--platform=node --packages=external --target=esnext \
+	--format=esm
+
+buildclean: | $(BUILDIR_ABS)
+	rm -rf $(BUILDIR)/*
+
+$(BUILDIR_ABS):
+	mkdir -p $@
+
+# Serve
+serve: TMPDIR=/tmp/clickpie
+serve: LINK_BUNDLER=clickpie-server-bundler
+serve: LINK_RELOADER=clickpie-server-reloader
+serve: LINK_SERVER=clickpie-server
+serve: build dotenv | $(LOGDIR_ABS)
+# Create tempdir
+	@[ ! -d $(TMPDIR) ] && mkdir $(TMPDIR)
+	@PATH='$(TMPDIR):$(PATH)'
+# CHANGE DIR TO TMPDIR
+	cd $(TMPDIR)
+ifndef inotify
+# Create links to esbuild, inotifywait and node
+	if ! [[  -h $(LINK_BUNDLER) && -h $(LINK_RELOADER) ]]; then
+		ln -sfr -T $(esbuild) $(LINK_BUNDLER)
+		ln -sfr -T $(inotifywait) $(LINK_RELOADER)
+		ln -sfr -T $(node) $(LINK_SERVER)
+	fi
+# Clear previous logs
+	rm -f $(LOGDIR_ABS)/clickpie-server.log
+# Spawn bundler daemon
+	$(LINK_BUNDLER) --bundle $(SRCDIR_ABS)/clickpie-server.js --outdir=$(BUILDIR_ABS) \
+	--platform=node --packages=external --target=esnext \
+	--format=esm --watch=forever &>> $(LOGDIR_ABS)/clickpie-server.log &
+# Spawn reloader daemon
+	$(LINK_RELOADER) $(BUILDIR_ABS)/clickpie-server.js \
+	--monitor --event modify --quiet | while read -r change; do
+		echo [RELOADER] $$change
+		make -C $(PKGDIR_ABS) serve inotify=true --silent &
+	done &>> $(LOGDIR_ABS)/clickpie-server.log &
+	exit 0
+endif
+# FOLLOWING STATEMENTS ARE EXECUTED BY THE RELOADER DAEMON
+# Remove old server daemon
+	old_daemon=$$(ps -o command -o pid | grep '^$(LINK_SERVER)[[:space:]]' | \
+	cut -d' ' -f-3 --complement)
+	if [ -n "$$old_daemon" ]; then
+		echo [RELOADER] Removing old server daemon "$$old_daemon"
+		kill "$$old_daemon"
+	fi
+	echo [RELOADER] Starting server daemon
+# Starting new server daemon
+	$(loadenv)
+	$(LINK_SERVER) $(BUILDIR_ABS)/clickpie-server.js \
+	&>> $(LOGDIR_ABS)/clickpie-server.log &
+
+$(LOGDIR_ABS):
+	mkdir $@
+
+stop:
+	@for proc in $$(pgrep clickpie-server); do
+	echo $$proc
+	kill $$proc
+	done
+
+run: file=
+run: dotenv $(file)
+	@if [[ "$${file:-}" == "" ]]; then
+	echo "Usage: 'make run file [args]'"
+	exit 1
+	fi
+	extension="$${file##*.}"
+	$(loadenv)
+	case $$extension in
+	sh)
+	$(SHELL) $(file) $(args)
+	;;
+	js)
+	$(node) $(file) $(args)
+	;;
+	*)
+	echo "Unrecognized extension: $$extension"
+	echo "Failed to 'make $@ $^'"
+	;;
+	esac
+
+.DEFAULT:
+	@if [ ! -f "$<" ]; then
+	echo "Missing file $${file:-}"
+	exit 1
+	fi
+
+dotenv:
+	$(dotenv) $(dotenvflags) $(dotenvdirs) | sort > $(dotenvfile)
+
+clean:
+	-rm -rf build
+	-rm -rf dist
+	-rm -f *.log
+	-rm -f $(dotenvfile)
+
+distclean: clean
+	-rm -rf node_modules
+	-rm -f package-lock.json
+	-rm -f macros.m4
+	-rm -f .env*
+
+help:
+	@cat ./Makefile | grep -i --color=auto 'phony' | cut -d ' ' -f2- | tail --lines=+3
+
+.PHONY: help
+# General setup of the repository
+.PHONY: all # build application
+# Software development
+.PHONY: serve # serve service
+.PHONY: run # read dotenvfile and run any file
+.PHONY: scratch # read dotenvfile and run the scratch file
+.PHONY: dotenv # write environment into .env
+.PHONY: build # build application
+# Cleaning
+.PHONY: clean # Remove files created by make build, install, package, dist...
+.PHONY: distclean # Remove files created by configure
+# Miscellaenous
