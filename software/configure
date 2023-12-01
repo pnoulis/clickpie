@@ -11,17 +11,21 @@ out_envfile=.env.conf
 out_macrosfile=macros.m4
 out_makefile=Makefile
 
+
 printenv > $pre_config_env
 
 # OPTIONS
 WITH_CLICKUP_TARGET=IE
 WITH_DEPLOY_TARGET=IE_CLOUD
 WITH_GCLOUD_TARGET=PN
+WITH_INSTALLDIRS_PRESET=gnu_prefix
 BUILDIR_STEM=build
 SKIP_NPM_INSTALL=false
 export CLICKPIE_SERVER_URL_PUBLIC=
 export CLICKPIE_SERVER_URL_LOCAL=
 export LOGLEVEL=debug
+
+# Installation directories
 export PREFIX=
 export EXEC_PREFIX=
 export BINDIR=
@@ -42,20 +46,24 @@ export LOCALEDIR=
 # --------------------------------------------------------------------------------
 set -o allexport
 
+# System Analysis
+BUILD_ARCH_SPECIFIER=$(basename $(systemd-path system-library-arch))
+HOST_ARCH_SPECIFIER=$BUILD_ARCH_SPECIFIER
+TARGET_ARCH_SPECIFIER=$HOST_ARCH_SPECIFIER
 
 # App description
-APP_NAME=clickpie-software
-APP_VERSION=0.0.1
-APP_VVERSION=v${APP_VERSION}
-APP_DISTNAME=${APP_NAME}-${APP_VVERSION}
+PKG_NAME=clickpie-software
+PKG_VERSION=0.0.1
+PKG_VVERSION=v${PKG_VERSION}
+PKG_DISTNAME=${PKG_NAME}-${PKG_VVERSION}
 API_VERSION=1
 API_VVERSION=v${API_VERSION}
 
 # App directories
-PKGDIR=.
-PKGDIR_ABS=$(pwd)
-SRCDIR=${PKGDIR}/src
-SRCDIR_ABS=${PKGDIR_ABS}/src
+PKGDIR=
+PKGDIR_ABS=
+SRCDIR=
+SRCDIR_ABS=
 BUILDIR=${PKGDIR}/build
 BUILDIR_ABS=${PKGDIR_ABS}/build
 CACHEDIR=${PREFIX}/var
@@ -105,14 +113,12 @@ set +o allexport
 main() {
   parse_args "$@"
   set -- "${POSARGS[@]}"
-  debug "Config: $(quote $CONFIG)"
-  debug "Clickup login: $(quote $CLICKUP_LOGIN)"
 
   NODE_ENV="$MODE"
   printf "Configuring...\n"
+  resolve_pkgdirs
+  resolve_system
   printf "Resolving --mode...|%s\n" "$MODE"
-
-  define_pkgdirs
 
   printf "Checking dependency...|node-v21.0.0...|"
   __node_path="$(command -v node)"
@@ -162,6 +168,7 @@ main() {
     rm -f $log_npm_install
   fi
 
+
   printf "Decrypting secrets...|%s\n" "$out_secrets"
   if ! ( [ -f "$out_secrets" ] || gpg --decrypt --quiet "$in_secrets" > "$out_secrets" ); then
     error "Failed to decrypt $in_secrets"
@@ -208,15 +215,29 @@ main() {
   CLICKPIE_API_URL_LOCAL_HOSTNAME="${CLICKPIE_SERVER_URL_LOCAL_HOSTNAME}"
   CLICKPIE_API_URL_LOCAL="${CLICKPIE_API_URL_LOCAL_SCHEME}"://"${CLICKPIE_API_URL_LOCAL_HOSTNAME}":"${CLICKPIE_API_URL_LOCAL_PORT}"/api/"${API_VVERSION}"
 
-  define_installdirs
-  define_derivedir
+
+  resolve_xdgdirs
+  define_installdirs_$WITH_INSTALLDIRS_PRESET
+  show_installdirs
+  define_derivedirs
   define_env
+  exit 0
   makefile
   configure_clickpie_server
   cleanup
 }
 
-define_pkgdirs() {
+resolve_system() {
+  # System Analysis
+  declare -gx BUILD_ARCH_SPECIFIER=$(basename $(systemd-path system-library-arch))
+  echo "BUILD_ARCH_SPECIFIER...|$BUILD_ARCH_SPECIFIER"
+  declare -gx HOST_ARCH_SPECIFIER=$BUILD_ARCH_SPECIFIER
+  echo "HOST_ARCH_SPECIFIER...|$HOST_ARCH_SPECIFIER"
+  declare -gx TARGET_ARCH_SPECIFIER=$HOST_ARCH_SPECIFIER
+  echo "TARGET_ARCH_SPECIFIER...|$TARGET_ARCH_SPECIFIER"
+}
+
+resolve_pkgdirs() {
   printf "Resolving package directories...\n"
   declare -gx CONFIGUREDIR_ABS="$(pwd)"
   echo "CONFIGUREDIR_ABS...|$CONFIGUREDIR_ABS"
@@ -233,21 +254,331 @@ define_pkgdirs() {
   echo "BUILDIR...|$BUILDIR"
 }
 
+resolve_xdgdirs() {
+  printf "Resolving XDG dirs...\n"
+  # XDG Base directories
+  # https://specifications.freedesktop.org/basedir-spec/basedir-spec-0.8.html
+
+  # user-specific data files prefix
+  declare -gx XDG_DATA_HOME="${XDG_DATA_HOME:-$HOME/.local/share}"
+  echo "XDG_DATA_HOME...|$XDG_DATA_HOME"
+  # user-specific configuration files prefix
+  declare -gx XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
+  echo "XDG_CONFIG_HOME...|$XDG_CONFIG_HOME"
+  # user-specific state data files prefix
+  declare -gx XDG_STATE_HOME="${XDG_STATE_HOME:-$HOME/.local/state}"
+  echo "XDG_STATE_HOME...|$XDG_STATE_HOME"
+  # user-specific cache data files prefix
+  declare -gx XDG_CACHE_HOME="${XDG_CACHE_HOME:-$HOME/.cache}"
+  echo "XDG_CACHE_HOME...|$XDG_CACHE_HOME"
+  # user-specific runtime files prefix
+  declare -gx XDG_RUNTIME_DIR="$XDG_RUNTIME_DIR"
+  echo "XDG_RUNTIME_DIR...|$XDG_RUNTIME_DIR"
+  # user-specific data files SEARCH path
+  declare -gx XDG_DATA_DIRS="${XDG_DATA_DIRS:-/usr/local/share/:/usr/share/}"
+  echo "XDG_DATA_DIRS...|$XDG_DATA_DIRS"
+  # user-specific configuration files SEARCH path
+  declare -gx XDG_CONFIG_DIRS="${XDG_CONFIG_DIRS:-/etc/xdg}"
+  echo "XDG_CONFIG_DIRS...|$XDG_CONFIG_DIRS"
+
+  # XDG User directories
+  # https://www.freedesktop.org/wiki/Software/xdg-user-dirs/
+  declare -gx XDG_DESKTOP_DIR="$(xdg-user-dir DESKTOP)"
+  echo "XDG_DESKTOP_DIR...|$XDG_DESKTOP_DIR"
+  declare -gx XDG_DOWNLOAD_DIR="$(xdg-user-dir DOWNLOAD)"
+  echo "XDG_DOWNLOAD_DIR...|$XDG_DOWNLOAD_DIR"
+  declare -gx XDG_PUBLICSHARE_DIR="$(xdg-user-dir PUBLICSHARE)"
+  echo "XDG_PUBLICSHARE_DIR...|$XDG_PUBLICSHARE_DIR"
+  declare -gx XDG_TEMPLATES_DIR="$(xdg-user-dir TEMPLATES)"
+  echo "XDG_TEMPLATES_DIR...|$XDG_TEMPLATES_DIR"
+  declare -gx XDG_DOCUMENTS_DIR="$(xdg-user-dir DOCUMENTS)"
+  echo "XDG_DOCUMENTS_DIR...|$XDG_DOCUMENTS_DIR"
+  declare -gx XDG_MUSIC_DIR="$(xdg-user-dir MUSIC)"
+  echo "XDG_MUSIC_DIR...|$XDG_MUSIC_DIR"
+  declare -gx XDG_PICTURES_DIR="$(xdg-user-dir PICTURES)"
+  echo "XDG_PICTURES_DIR...|$XDG_PICTURES_DIR"
+  declare -gx XDG_VIDEOS_DIR="$(xdg-user-dir VIDEOS)"
+  echo "XDG_VIDEOS_DIR...|$XDG_VIDEOS_DIR"
+}
+
+define_installdirs_vendor() {
+  PREFIX=/usr
+  EXEC_PREFIX=$PREFIX
+  BINDIR=${EXEC_PREFIX}/bin
+  SBINDIR=${EXEC_PREFIX}/sbin
+  LIBEXECDIR=${EXEC_PREFIX}/libexec
+  DATAROOTDIR=${PREFIX}/share
+  DATADIR=${DATAROOTDIR}
+  SYSCONFDIR=/etc
+  LOCALSTATEDIR=/var
+  RUNSTATEDIR=/run
+  INCLUDEDIR=${PREFIX}/include
+  LIBDIR=${EXEC_PREFIX}/lib
+}
+define_installdirs_host() {
+  PREFIX=/usr/local
+  EXEC_PREFIX=$PREFIX
+  BINDIR=${EXEC_PREFIX}/bin
+  SBINDIR=${EXEC_PREFIX}/sbin
+  LIBEXECDIR=${EXEC_PREFIX}/libexec
+  DATAROOTDIR=${PREFIX}/share
+  DATADIR=${DATAROOTDIR}
+  SYSCONFDIR=/etc
+  LOCALSTATEDIR=/var
+  RUNSTATEDIR=/run
+  INCLUDEDIR=${PREFIX}/include
+  LIBDIR=${EXEC_PREFIX}/lib
+}
+define_installdirs_user() {
+  PREFIX=${HOME}/.local
+  EXEC_PREFIX=$PREFIX
+  BINDIR=${EXEC_PREFX}/bin
+  SBINDIR=${EXEC_PREFIX}/sbin
+  LIBDIR=${EXEC_PREFIX}/lib
+  LIBEXECDIR=${EXEC_PREFIX}/libexec
+  INCLUDEDIR=${PREFIX}/include
+  LOCALSTATEDIR=${PREFIX}/var
+  RUNSTATEDIR=${PREFIX}/run
+  SYSCONFDIR=${PREFIX}/etc
+  DATAROOTDIR=${PREFIX}/share
+  DATADIR=${DATAROOTDIR}
+}
+define_installdirs_opt() {
+  PREFIX=/opt/$PKG_NAME
+  EXEC_PREFIX=$PREFIX
+  BINDIR=${EXEC_PREFIX}/bin
+  SBINDIR=${EXEC_PREFIX}/sbin
+  LIBDIR=${EXEC_PREFIX}/lib
+  LIBEXECDIR=${EXEC_PREFIX}/libexec
+  INCLUDEDIR=${PREFIX}/include
+  LOCALSTATEDIR=/var/opt
+  RUNSTATEDIR=/run
+  SYSCONFDIR=/etc/opt
+  DATAROOTDIR=${PREFIX}/share
+  DATADIR=${DATAROOTDIR}
+}
+define_installdirs_srv() {
+  PREFIX=/srv/${PKG_NAME}
+  EXEC_PREFIX=${PREFIX}
+  BINDIR=${EXEC_PREFIX}/bin
+  SBINDIR=${EXEC_PREFIX}/sbin
+  LIBDIR=${EXEC_PREFIX}/lib
+  LIBEXECDIR=${EXEC_PREFIX}/libexec
+  INCLUDEDIR=${PREFIX}/include
+  LOCALSTATEDIR=/var
+  RUNSTATEDIR=/run
+  SYSCONFDIR=/srv/etc
+  DATAROOTDIR=${PREFIX}/share
+  DATADIR=${DATAROOTDIR}
+}
+define_installdirs_gnu_prefix() {
+  PREFIX=/usr/local
+  EXEC_PREFIX=$PREFIX
+  BINDIR=${EXEC_PREFIX}/bin
+  SBINDIR=${EXEC_PREFIX}/sbin
+  LIBDIR=${EXEC_PREFIX}/lib
+  LIBEXECDIR=${EXEC_PREFIX}/libexec
+  INCLUDEDIR=${PREFIX}/include
+  LOCALSTATEDIR=${PREFIX}/var
+  RUNSTATEDIR=${LOCALSTATEDIR}/run
+  SYSCONFDIR=${PREFIX}/etc
+  DATAROOTDIR=${PREFIX}/share
+  DATADIR=${DATAROOTDIR}
+}
+
+show_installdirs() {
+  printf "Defining installation directories with preset...|$WITH_INSTALLDIRS_PRESET\n"
+  echo "PREFIX...|$PREFIX"
+  echo "EXEC_PREFIX...|$EXEC_PREFIX"
+  echo "BINDIR...|$BINDIR"
+  echo "SBINDIR...|$SBINDIR"
+  echo "LIBDIR...|$LIBDIR"
+  echo "LIBEXECDIR...|$LIBEXECDIR"
+  echo "INCLUDEDIR...|$INCLUDEDIR"
+  echo "LOCALSTATEDIR...|$LOCALSTATEDIR"
+  echo "RUNSTATEDIR...|$RUNSTATEDIR"
+  echo "SYSCONFDIR...|$SYSCONFDIR"
+  echo "DATAROOTDIR...|$DATAROOTDIR"
+  echo "DATADIR...|$DATADIR"
+}
+
+define_derivedirs() {
+  # Persistent state and private data directories
+  # Derived from $LOCALSTATEDIR
+  printf "Defining derived dirs...\n"
+  declare -gx LOCALSTATEDIR_PKG="${LOCALSTATEDIR}/lib/${PKG_NAME}"
+  echo "LOCALSTATEDIR_PKG...|$LOCALSTATEDIR_PKG"
+  declare -gx LOCALSTATEDIR_USR="${XDG_STATE_HOME}"
+  echo "LOCALSTATEDIR_USR...|$LOCALSTATEDIR_USR"
+  declare -gx LOCALSTATEDIR_USR_PKG="${LOCALSTATEDIR_USR}/${PKG_NAME}"
+  echo "LOCALSTATEDIR_USR_PKG...|$LOCALSTATEDIR_USR_PKG"
+
+  # Runtime data directories
+  # Derived from $RUNSTATEDIR
+  declare -gx RUNSTATEDIR_PKG="${RUNSTATEDIR}/${PKG_NAME}"
+  echo "RUNSTATEDIR_PKG...|$RUNSTATEDIR_PKG"
+  declare -gx RUNSTATEDIR_USR=
+  echo "RUNSTATEDIR_USR...|$RUNSTATEDIR_USR"
+  declare -gx RUNSTATEDIR_USR_PKG=
+  echo "RUNSTATEDIR_USR_PKG...|$RUNSTATEDIR_USR_PKG"
+
+  # Libraries and read-only data directories
+  # Derived from LIBDIR=
+  declare -gx LIBDIR_PKG="${LIBDIR}/${PKG_NAME}"
+  echo "LIBDIR_PKG...|$LIBDIR_PKG"
+
+  # Architecture-dependent libraries and read-only data directories
+  declare -gx LIBDIR_ARCH="${LIBDIR}/${HOST_ARCH_SPECIFIER}"
+  echo "LIBDIR_ARCH...|$LIBDIR_ARCH"
+  declare -gx LIBDIR_ARCH_PKG="${LIBDIR_ARCH}/${PKG_NAME}"
+  echo "LIBDIR_ARCH_PKG...|$LIBDIR_ARCH_PKG"
+
+  # Header files directories
+  # Derived from $INCLUDEDIR
+  declare -gx INCLUDEDIR_PKG="${INCLUDEDIR}/${PKG_NAME}"
+  echo "INCLUDEDIR_PKG...|$INCLUDEDIR_PKG"
+
+  # Architecture-dependent header files directories
+  # Derived from $INCLUDEDIR
+  declare -gx INCLUDEDIR_ARCH="${INCLUDEDIR}/${HOST_ARCH_SPECIFIER}"
+  echo "INCLUDEDIR_ARCH...|$INCLUDEDIR_ARCH"
+  declare -gx INCLUDEDIR_ARCH_PKG="${INCLUDEDIR_ARCH}/${PKG_NAME}"
+  echo "INCLUDEDIR_ARCH_PKG...|$INCLUDEDIR_ARCH_PKG"
+
+  # Package-run executables directories
+  # Derived from $LIBEXECDIR
+  declare -gx LIBEXECDIR_PKG="${LIBEXECDIR}/${PKG_NAME}"
+  echo "LIBEXECDIR_PKG...|$LIBEXECDIR_PKG"
+
+  # Configurations
+  # Derived from $SYSCONFDIR
+  declare -gx SYSCONFDIR_PKG="${SYSCONFDIR}/${PKG_NAME}"
+  echo "SYSCONFDIR_PKG...|$SYSCONFDIR_PKG"
+  declare -gx SYSCONFDIR_USR="${XDG_CONFIG_HOME}"
+  echo "SYSCONFDIR_USR...|$SYSCONFDIR_USR"
+  declare -gx SYSCONFDIR_USR_PKG="${SYSCONFDIR_USR}/${PKG_NAME}"
+  echo "SYSCONFDIR_USR_PKG...|$SYSCONFDIR_USR_PKG"
+
+  # Application executables
+  # BINDIR = Defined elsewhere
+  declare -gx BINDIR_USR="${HOME}/.local/bin"
+  echo "BINDIR_USR...|$BINDIR_USR"
+
+  # System executables
+  # SBINDIR = Defined elsewhere
+  declare -gx SBINDIR_USR="${HOME}/.local/sbin"
+  echo "SBINDIR_USR...|$SBINDIR_USR"
+
+  # Logs
+  # Derived from $LOCALSTATEDIR
+  declare -gx LOGDIR="${LOCALSTATEDIR}/log"
+  echo "LOGDIR...|$LOGDIR"
+  declare -gx LOGDIR_PKG="${LOGDIR}/${PKG_NAME}"
+  echo "LOGDIR_PKG...|$LOGDIR_PKG"
+
+  # Persistent system cache data
+  # Derived from $LOCALSTATEDIR
+  declare -gx CACHEDIR="${LOCALSTATEDIR}/cache"
+  echo "CACHEDIR...|$CACHEDIR"
+  declare -xg CACHEDIR_PKG="${CACHEDIR}/${PKG_NAME}"
+  echo "CACHEDIR_PKG...|$CACHEDIR_PKG"
+  declare -gx CACHEDIR_USR="${XDG_CACHE_HOME}"
+  echo "CACHEDIR_USR...|$CACHEDIR_USR"
+  declare -gx CACHEDIR_USR_PKG="${CACHEDIR_USR}/${PKG_NAME}"
+  echo "CACHEDIR_USR_PKG...|$CACHEDIR_USR_PKG"
+
+  # Persistent system spool data
+  # Derived from $LOCALSTATEDIR
+  declare -gx SPOOLDIR="${LOCALSTATEDIR}/spool"
+  echo "SPOOLDIR...|$SPOOLDIR"
+  declare -gx SPOOLDIR_PKG="${SPOOLDIR}/${PKG_NAME}"
+  echo "SPOOLDIR_PKG...|$SPOOLDIR_PKG"
+
+  # Lock directories
+  # Derived from $RUNSTATEDIR
+  declare -gx LOCKDIR="${RUNSTATEDIR}/lock"
+  echo "LOCKDIR...|$LOCKDIR"
+  declare -gx LOCKDIR_PKG="${LOCKDIR}/${PKG_NAME}"
+  echo "LOCKDIR_PKG...|$LOCKDIR_PKG"
+
+  # Temporary files
+  declare -gx TMPDIR_ENV=$TMPDIR
+  echo "TMPDIR_ENV...|$TMPDIR_ENV"
+  declare -gx TMPDIR_PERSISTENT=/var/tmp
+  echo "TMPDIR_PERSISTENT...|$TMPDIR_PERSISTENT"
+  declare -gx TMPDIR_FALLBACK=/tmp
+  echo "TMPDIR_FALLBACK...|$TMPDIR_FALLBACK"
+  declare -gx TMPDIR=$TMPDIR_ENV
+  TMPDIR=${TMPDIR:-$TMPDIR_FALLBACK}
+  echo "TMPDIR...|$TMPDIR"
+}
+
 define_installdirs() {
   printf "Resolving installation directories...\n"
+
+  # De facto
+  PREFIX=
+  # Gnu standard
+  PREFIX=/usr/local
+  # Systemd
+  PREFIX=
+  # Development
   isempty PREFIX && PREFIX="$(pwd)"
   echo "PREFIX...|$(realpath -m --relative-to=. $PREFIX)"
+
+  # Gnu standard
+  EXEC_PREFIX="$PREFIX"
+  # De facto
+  EXEC_PREFIX=
+  # Development
   isempty EXEC_PREFIX && EXEC_PREFIX="$PREFIX"
   echo "EXEC_PREFIX...|$(realpath -m --relative-to=. $EXEC_PREFIX)"
+
+  # Gnu standard
+  BINDIR="${EXEC_PREFIX}/bin"
+  # De facto
+  BINDIR=/usr/bin
+  # Development
   isempty BINDIR && BINDIR="${EXEC_PREFIX}/bin"
   echo "BINDIR...|$(realpath -m --relative-to=. $BINDIR)"
+
+  # Gnu standard
+  SBINDIR="${EXEC_PREFIX}/sbin"
+  # De facto
+  SBINDIR=/usr/sbin
+  # Development
   isempty SBINDIR && SBINDIR="${EXEC_PREFIX}/sbin"
   echo "SBINDIR...|$(realpath -m --relative-to=. $SBINDIR)"
+
+  # Defacto
+  LIBEXECDIR=/usr/libexec/$PKG_NAME
+  # Gnu standard
+  LIBEXECDIR="${EXEC_PREFIX}/libexec"
+  # $(libexecdir)/package-name/machine/version.
+  # Systemd
+  LIBEXECDIR=/usr/lib/$PKG_NAME
+  # Development
   isempty LIBEXECDIR && LIBEXECDIR="${EXEC_PREFIX}/libexec"
   echo "LIBEXECDIR...|$(realpath -m --relative-to=. $LIBEXECDIR)"
+
+  # De facto
+  DATAROOTDIR=/usr/share
+  # Gnu standard
+  DATAROOTDIR="${PREFIX}/share"
+  # Systemd
+  DATAROOTDIR=/usr/share
+  # Development
   isempty DATAROOTDIR && DATAROOTDIR="${PREFIX}/share"
   echo "DATAROOTDIR...|$(realpath -m --relative-to=. $DATAROOTDIR)"
-  isempty DATADIR && DATADIR="${DATAROOTDIR}/${APP_NAME}"
+
+  # De facto
+  DATADIR=/usr/share/$PKG_NAME
+  # Gnu standard
+  DATADIR="${DATAROOTDIR}/${PKG_NAME}"
+  # Systemd
+  DATADIR="${DATAROOTDIR}/${PKG_NAME}"
+
+  isempty DATADIR && DATADIR="${DATAROOTDIR}/${PKG_NAME}"
   echo "DATADIR...|$(realpath -m --relative-to=. $DATADIR)"
   isempty SYSCONFDIR && SYSCONFDIR="${PREFIX}/etc"
   echo "SYSCONFDIR...|$(realpath -m --relative-to=. $SYSCONFDIR)"
@@ -257,7 +588,7 @@ define_installdirs() {
   # GNU standard
   isempty LOCALSTATEDIR && LOCALSTATEDIR="${PREFIX}/var"
   # De facto
-  LOCALSTATEDIR=/var/lib/${APP_NAME}
+  LOCALSTATEDIR=/var/lib/${PKG_NAME}
   echo "LOCALSTATEDIR...|$(realpath -m --relative-to=. $LOCALSTATEDIR)"
 
   # GNU standard
@@ -266,24 +597,16 @@ define_installdirs() {
   RUNSTATEDIR=/run
   echo "RUNSTATEDIR...|$(realpath -m --relative-to=. $RUNSTATEDIR)"
 
+  SYSTEM_TMPDIR_=
+  ENV_TMPDIR=
+  VAR_TMPDIR=
+
   isempty INCLUDEDIR && INCLUDEDIR="${PREFIX}/include"
   echo "INCLUDEDIR...|$(realpath -m --relative-to=. $INCLUDEDIR)"
-  isempty DOCDIR && DOCDIR="${DATAROOTDIR}/doc/${APP_NAME}"
+  isempty DOCDIR && DOCDIR="${DATAROOTDIR}/doc/${PKG_NAME}"
   echo "DOCDIR...|$(realpath -m --relative-to=. $DOCDIR)"
   isempty LIBDIR && LIBDIR="${LIBEXECDIR}/lib"
   echo "LIBDIR...|$(realpath -m --relative-to=. $LIBDIR)"
-}
-
-define_derivedirs() {
-  # https://wiki.debian.org/Multiarch/Tuples
-  # https://man.archlinux.org/man/file-hierarchy.7
-  # https://wiki.debian.org/Multiarch/Tuples
-  # https://man.archlinux.org/man/systemd-path.1.en
-  declare -gx LOGDIR
-  declare -gx CACHEDIR
-  declare -gx SPOOLDIR
-  declare -gx SKELCONFDIR=/usr/share/factory/etc
-  echo 0
 }
 
 expand() {
@@ -389,6 +712,12 @@ parse_args(){
       --mode=* | --mode* | -m)
         MODE="$(parse_param "$@")" || shift $?
         ;;
+      --with-installdirs-preset=* | --with-installdirs-preset*)
+        WITH_INSTALLDIRS_PRESET="$(parse_param "$@")" || shift $?
+        ;;
+      --prefix=* | --prefix*)
+        PREFIX="$(parse_param "$@")" || shift $?
+        ;;
       --buildir-stem=* | --buildir-stem)
         BUILDIR_STEM="$(parse_param "$@")" || shift $?
         ;;
@@ -409,9 +738,6 @@ parse_args(){
         ;;
       --with-gcloud-target=* | --with-gcloud-target*)
         WITH_GCLOUD_TARGET="$(parse_param "$@")" || shift $?
-        ;;
-      --prefix=* | --prefix*)
-        PREFIX="$(parse_param "$@")" || shift $?
         ;;
       --loglevel=* | --loglevel*)
         LOGLEVEL="$(parse_param "$@")" || shift $?
@@ -502,6 +828,95 @@ debug_script_params() {
   debug "Space: $(quote $_SPACE_ID)"
   debug "Folder: $(quote $_FOLDER_ID)"
   debug "List: $(quote $_LIST_ID)"
+}
+debug_xdg_dirs() {
+  echo XDG_DATA_HOME "${XDG_DATA_HOME}"
+  echo XDG_CONFIG_HOME "${XDG_CONFIG_HOME}"
+  echo XDG_STATE_HOME "${XDG_STATE_HOME}"
+  echo XDG_CACHE_HOME "${XDG_CACHE_HOME}"
+  echo XDG_RUNTIME_DIR "${XDG_RUNTIME_DIR}"
+  echo XDG_DATA_DIRS "${XDG_DATA_DIRS}"
+  echo XDG_CONFIG_DIRS "${XDG_CONFIG_DIRS}"
+  echo XDG_DESKTOP_DIR $XDG_DESKTOP_DIR
+  echo XDG_DOWNLOAD_DIR $XDG_DOWNLOAD_DIR
+  echo XDG_PUBLICSHARE_DIR $XDG_PUBLICSHARE_DIR
+  echo XDG_TEMPLATES_DIR $XDG_TEMPLATES_DIR
+  echo XDG_DOCUMENTS_DIR $XDG_DOCUMENTS_DIR
+  echo XDG_MUSIC_DIR $XDG_MUSIC_DIR
+  echo XDG_PICTURES_DIR $XDG_PICTURES_DIR
+  echo XDG_VIDEOS_DIR $XDG_VIDEOS_DIR
+}
+
+debug_dirs() {
+  echo Persistent state and private data directories
+  echo LOCALSTATEDIR $LOCALSTATEDIR
+  echo LOCALSTATEDIR_PKG $LOCALSTATEDIR_PKG
+  echo LOCALSTATEDIR_USR $LOCALSTATEDIR_USR
+  echo LOCALSTATEDIR_USR_PKG $LOCALSTATEDIR_USR_PKG
+  echo
+  echo Runtime data directories
+  echo RUNSTATEDIR $RUNSTATEDIR
+  echo RUNSTATEDIR_PKG $RUNSTATEDIR_PKG
+  echo RUNSTATEDIR_USR $RUNSTATEDIR_USR
+  echo RUNSTATEDIR_USR_PKG $RUNSTATEDIR_USR_PKG
+  echo
+  echo Libraries and read-only data directories
+  echo LIBDIR $LIBDIR
+  echo LIBDIR_PKG $LIBDIR_PKG
+  echo
+  echo Architecture-dependent libraries and read-only data directories
+  echo LIBDIR_ARCH $LIBDIR_ARCH
+  echo LIBDIR_ARCH_PKG $LIBDIR_ARCH_PKG
+  echo
+  echo Header files directories
+  echo INCLUDEDIR $INCLUDEDIR
+  echo INCLUDEDIR_PKG $INCLUDEDIR_PKG
+  echo
+  echo Architecture-dependent header files directories
+  echo   INCLUDEDIR_ARCH $INCLUDEDIR_ARCH
+  echo   INCLUDEDIR_ARCH_PKG $INCLUDEDIR_ARCH_PKG
+  echo
+  echo Package-run executables directories
+  echo   LIBEXECDIR $LIBEXECDIR
+  echo   LIBEXECDIR_PKG $LIBEXECDIR_PKG
+  echo
+  echo Configurations
+  echo   SYSCONFDIR $SYSCONFDIR
+  echo   SYSCONFDIR_PKG $SYSCONFDIR_PKG
+  echo   SYSCONFDIR_USR $SYSCONFDIR_USR
+  echo   SYSCONFDIR_USR_PKG $SYSCONFDIR_USR_PKG
+  echo
+  echo Application executables
+  echo   BINDIR $BINDIR
+  echo   BINDIR_USR $BINDIR_USR
+  echo
+  echo System executables
+  echo   SBINDIR $SBINDIR
+  echo   SBINDIR_USR $SBINDIR_USR
+  echo
+  echo Logs
+  echo   LOGDIR $LOGDIR
+  echo   LOGDIR_PKG $LOGDIR_PKG
+  echo
+  echo Persistent system cache data
+  echo   CACHEDIR $CACHEDIR
+  echo   CACHEDIR_PKG $CACHEDIR_PKG
+  echo   CACHEDIR_USR $CACHEDIR_USR
+  echo   CACHEDIR_USR_PKG $CACHEDIR_USR_PKG
+  echo
+  echo Persistent system spool data
+  echo   SPOOLDIR $SPOOLDIR
+  echo   SPOOLDIR_PKG $SPOOLDIR_PKG
+  echo
+  echo Lock directories
+  echo   LOCKDIR $LOCKDIR
+  echo   LOCKDIR_PKG $LOCKDIR_PKG
+  echo
+  echo Temporary files
+  echo   TMPDIR_ENV $TMPDIR_ENV
+  echo   TMPDIR_PERSISTENT $TMPDIR_PERSISTENT
+  echo   TMPDIR_FALLBACK $TMPDIR_FALLBACK
+  echo   TMPDIR $TMPDIR
 }
 
 main "$@"
