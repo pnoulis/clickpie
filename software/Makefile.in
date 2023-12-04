@@ -1,6 +1,8 @@
 #!/usr/bin/make
 
+##################################################
 # Make config
+##################################################
 SHELL:=/usr/bin/bash
 .SHELLFLAGS:=-o errexit -o pipefail -c -o nounset
 .DEFAULT_GOAL:= all
@@ -9,79 +11,92 @@ SHELL:=/usr/bin/bash
 .SECONDEXPANSION:
 .ONESHELL:
 
+##################################################
 # App description
-APP_NAME=IN_APP_NAME
-APP_VERSION=IN_APP_VERSION
-APP_VVERSION=IN_APP_VVERSION
-APP_DISTNAME=IN_APP_DISTNAME
-API_VERSION=IN_API_VERSION
-API_VVERSION=IN_API_VVERSION
+##################################################
+pkg_name=IN_PKG_NAME
+pkg_version=IN_PKG_VERSION
+pkg_vversion=IN_PKG_VVERSION
+pkg_distname=IN_PKG_DISTNAME
+api_version=IN_API_VERSION
+api_vversion=IN_API_VVERSION
 
+##################################################
 # App directories
-PREFIX=IN_PREFIX
-PKGDIR=IN_PKGDIR
-PKGDIR_ABS=IN_PKGDIR_ABS
-SRCDIR=IN_SRCDIR
-SRCDIR_ABS=IN_SRCDIR_ABS
-BUILDIR=IN_BUILDIR
-BUILDIR_ABS=IN_BUILDIR_ABS
-CACHEDIR=IN_CACHEDIR
-TEMPDIR=IN_TEMPDIR
-CONFDIR=IN_CONFDIR
+##################################################
+srcdir_top=IN_SRCDIR
+srcdir_top_abs=IN_SRCDIR_ABS
+buildir_top=IN_CONFIGUREDIR
+buildir_top_abs=IN_CONFIGUREDIR_ABS
+buildir=IN_BUILDIR
+buildir_abs=IN_BUILDIR_ABS
+srcdir=$(srcdir_top)/src
+srcdir_abs=$(srcdir_top_abs)/src
+confdir=$(srcdir_top)/config
+scriptdir=$(srcdir_top)/scripts
 
-# Standard commands
-# ------------------------------
-install=/usr/bin/install
-mkdirp:=/usr/bin/mkdir -p
-sort:=/usr/bin/sort
-cp:=/usr/bin/cp
-rm:=/usr/bin/rm
-chmod:=/usr/bin/chmod
-m4:=/usr/bin/m4
-bash:=/usr/bin/bash
+##################################################
+# Installation directories
+##################################################
+installdir_localstate=IN_LOCALSTATEDIR
+installdir_localstate_pkg=IN_LOCALSTATEDIR_PKG
+installdir_runstate=IN_RUNSTATEDIR
+installdir_runstate_pkg=IN_RUNSTATEDIR_PKG
+installdir_lib=IN_LIBDIR
+installdir_lib_pkg=IN_LIBDIR_PKG
+installdir_libarch=IN_LIBDIR_ARCH
+installdir_libarch_pkg=IN_LIBDIR_ARCH_PKG
+installdir_include=IN_INCLUDEDIR
+installdir_include_pkg=IN_INCLUDEDIR_PKG
+installdir_sysconf=IN_SYSCONFDIR
+installdir_sysconf_pkg=IN_SYSCONFDIR_PKG
+installdir_sysconf_usr=IN_SYSCONFDIR_USR
+installdir_sysconf_usr_pkg=IN_SYSCONFDIR_USR_PKG
+installdir_bin=IN_BINDIR
+installdir_sbin=IN_SBINDIR
+installdir_log=IN_LOGDIR
+installdir_log_pkg=IN_LOGDIR_PKG
+installdir_cache=IN_CACHEDIR
+installdir_cache_pkg=IN_CACHEDIR_PKG
+installdir_spool=IN_SPOOLDIR
+installdir_spool_pkg=IN_SPOOLDIR_PKG
+installdir_lock=IN_LOCKDIR
+installdir_lock_pkg=IN_LOCKDIR_PKG
+tmpdir=IN_TMPDIR
 
+
+##################################################
 # Tools and their configurations
-# ------------------------------
+##################################################
+# node
 node:=IN_NODE
-dotenv:=IN_DOTENV
-dotenvdirs:=$(CONFDIR)/env/* $(PKGDIR)/.env.*
-dotenvfile:=.env
-loadenv:=set -a; source $(dotenvfile)
-json2csv:=$(CONFDIR)/scripts/json2csv.jq
+# dotenv
+dotenvdirs:=IN_CONFIG_ENVFILE $(srcdir_top)/.env.*
+dotenvfile:=$(srcdir_top)/.env
+loadenv=set -a; source $(dotenvfile)
+# jq
+jq:=IN_JQ
+json2csv:=$(scriptdir)/json2csv.jq
+# inotifywait
+inotifywait:=IN_INOTIFYWAIT
 
+##################################################
 # Misc
-script_commons=$(PKGDIR)/scripts/script-template.sh
+##################################################
+script_commons=$(scriptdir)/script-template.sh
 
-all: build
 
-get-workspaces: dotenv
-	$(loadenv)
-	$(bash) ./scripts/get-workspaces.sh $(args)
 
-get-spaces: dotenv
-	$(loadenv)
-	$(bash) ./scripts/get-spaces.sh $(args)
-
-get-folders: dotenv
-	$(loadenv)
-	$(bash) ./scripts/get-folders.sh $(args)
-
-get-lists: dotenv
-	$(loadenv)
-	$(bash) ./scripts/get-lists.sh $(args)
-
-get-webhooks: dotenv
-	$(loadenv)
-	$(bash) ./scripts/get-webhooks.sh $(args)
-
-create-webhook: dotenv
-	$(loadenv)
-	$(bash) ./scripts/create-webhook.sh $(args)
-
+##################################################
+# scratch
+##################################################
 scratch: dotenv
 	$(loadenv)
 	$(node) ./tmp/scratch.js
 
+##################################################
+# run
+##################################################
 run: file=
 run: dotenv $(file)
 	@if [[ "$${file:-}" == "" ]]; then
@@ -103,47 +118,60 @@ run: dotenv $(file)
 	;;
 	esac
 
+##################################################
+# dotenv
+##################################################
+dotenv:
+	$(dotenv) $(dotenvflags) $(dotenvdirs) | sort > $(dotenvfile)
+
+##################################################
+# clean
+##################################################
+clean:
+	-rm -f *.tar.gz
+	-rm -f *.log
+	-rm -f $(dotenvfile)
+
+##################################################
+# distclean
+##################################################
+distclean:
+	-rm -rf $(buildir)
+	-rm -rf node_modules
+	-rm -f package-lock.json
+	-rm -f IN_CONFIG_MAKEFILE
+	-rm -f IN_CONFIG_ENVFILE
+	-rm -f IN_CONFIG_MACROSFILE
+	-rm -f IN_CONFIG_SECRETFILE
+
+##################################################
+# misc
+##################################################
 .DEFAULT:
 	@if [ ! -f "$<" ]; then
 	echo "Missing file $${file:-}"
 	exit 1
 	fi
 
-dotenv:
-	$(dotenv) $(dotenvflags) $(dotenvdirs) | sort > $(dotenvfile)
-
-clean:
-	-rm -f *.tar.gz
-	-rm -f *.log
-	-rm -rf build
-	-rm -rf dist
-	-rm -f $(dotenvfile)
-
-distclean: clean
-	-rm -rf node_modules
-	-rm -f package-lock.json
-	-rm -f macros.m4
-	-rm -f .env*
-	-rm -f .secrets
-
+##################################################
+# help
+##################################################
 help:
 	@cat ./Makefile | grep -i --color=auto 'phony' | cut -d ' ' -f2- | tail --lines=+3
 
 # Software development
 .PHONY: run # read dotenvfile and run any file
 .PHONY: scratch # read dotenvfile and run the scratch file
-.PHONY: dotenv # write environment into .env
 .PHONY: build # build application
+.PHONY: start # start application
+.PHONY: stop # stop application
 # Software distribution
-.PHONY: release # release a new application version
-.PHONY: publish # publish current release to a cloud VCS
-.PHONY: package # package a new built and metadata into a form suitable for distribution
-.PHONY: dist # package the source repo and metadata into a form suitable for distribution
 .PHONY: deploy # deploy the application to the consumer, such as a server
 # Cleaning
-.PHONY: clean # Remove files created by make build, install, package, dist...
+.PHONY: clean # Remove files created by make targets
 .PHONY: distclean # Remove files created by configure
 # Misc
 .PHONY: help
+.PHONY: dotenv # write environment into .env
 .PHONY: all # default target
 .PHONY: get-workspaces get-spaces get-folders get-lists get-webhooks

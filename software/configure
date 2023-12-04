@@ -2,6 +2,30 @@
 
 set -o pipefail
 
+printf "Resolving package directories...\n"
+
+declare -gx CONFIGUREDIR_ABS="$(pwd)"
+echo "CONFIGUREDIR_ABS...|$CONFIGUREDIR_ABS"
+
+declare -gx SRCDIR_ABS="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" 2>/dev/null && pwd)"
+echo "SRCDIR_ABS...|$SRCDIR_ABS"
+
+declare -gx CONFIGUREDIR="$(realpath -e --relative-to="$SRCDIR_ABS" "$CONFIGUREDIR_ABS")"
+echo "CONFIGUREDIR...|$CONFIGUREDIR"
+
+declare -gx SRCDIR="$(realpath -e --relative-to="$CONFIGUREDIR_ABS" "$SRCDIR_ABS")"
+echo "SRCDIR...|$SRCDIR"
+
+echo "BUILDIR_STEM...|$BUILDIR_STEM"
+declare -gx BUILDIR_ABS="${CONFIGUREDIR_ABS}/$BUILDIR_STEM"
+echo "BUILDIR_ABS...|$BUILDIR_ABS"
+
+declare -gx BUILDIR="$(realpath -m --relative-to="$SRCDIR_ABS" "$BUILDIR_ABS")"
+echo "BUILDIR...|$BUILDIR"
+
+exit 0
+
+
 pre_config_env=$(mktemp)
 post_config_env=$(mktemp)
 in_makefile=Makefile.in
@@ -15,6 +39,7 @@ out_makefile=Makefile
 printenv > $pre_config_env
 
 # OPTIONS
+MODE=production
 WITH_CLICKUP_TARGET=IE
 WITH_DEPLOY_TARGET=IE_CLOUD
 WITH_GCLOUD_TARGET=PN
@@ -59,23 +84,11 @@ PKG_DISTNAME=${PKG_NAME}-${PKG_VVERSION}
 API_VERSION=1
 API_VVERSION=v${API_VERSION}
 
-# App directories
-PKGDIR=
-PKGDIR_ABS=
-SRCDIR=
-SRCDIR_ABS=
-BUILDIR=${PKGDIR}/build
-BUILDIR_ABS=${PKGDIR_ABS}/build
-CACHEDIR=${PREFIX}/var
-TEMPDIR=${PREFIX}/var
-CONFDIR=${PREFIX}/config
-
 # Miscellaneous
-MODE=development
 NODE_ENV=
 
 # Tools
-ESBUILD=${PKGDIR_ABS}/node_modules/.bin/esbuild
+ESBUILD=${SRCDIR_ABS}/node_modules/.bin/esbuild
 DOTENV=${HOME}/bin/dotenv
 NODE=${HOME}/.nvm/versions/node/v21.0.0/bin/node
 
@@ -238,21 +251,7 @@ resolve_system() {
 }
 
 resolve_pkgdirs() {
-  printf "Resolving package directories...\n"
-  declare -gx CONFIGUREDIR_ABS="$(pwd)"
-  echo "CONFIGUREDIR_ABS...|$CONFIGUREDIR_ABS"
-  declare -gx CONFIGUREDIR="$(realpath -e --relative-to="$PKGDIR_ABS" "$CONFIGUREDIR_ABS")"
-  echo "CONFIGUREDIR...|$CONFIGUREDIR"
-  declare -gx PKGDIR_ABS="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" 2>/dev/null && pwd)"
-  echo "PKGDIR_ABS...|$PKGDIR_ABS"
-  declare -gx PKGDIR="$(realpath --relative-to="$CONFIGUREDIR_ABS" "$PKGDIR_ABS")"
-  echo "PKGDIR...|$PKGDIR"
-  echo "BUILDIR_STEM...|$BUILDIR_STEM"
-  declare -gx BUILDIR_ABS="${CONFIGUREDIR_ABS}/$BUILDIR_STEM"
-  echo "BUILDIR_ABS...|$BUILDIR_ABS"
-  declare -gx BUILDIR="$(realpath -m --relative-to="$CONFIGUREDIR_ABS" "$BUILDIR_ABS")"
-  echo "BUILDIR...|$BUILDIR"
-}
+  }
 
 resolve_xdgdirs() {
   printf "Resolving XDG dirs...\n"

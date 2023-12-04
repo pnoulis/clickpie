@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 
-./configure --mode=development \
+./configure.2 --mode=development \
             --skip-npm-install \
             --with-clickup-target=PN \
             --server-public-url=https://6db5-94-154-134-13.ngrok-free.app:80 \
