@@ -1,7 +1,7 @@
 #!/usr/bin/make
 
 # Package
-pkg_name:=clickpie
+pkg_name:=clickpie-project
 
 # Make configuration
 SHELL:=/usr/bin/bash
