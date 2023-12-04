@@ -8,177 +8,61 @@ SHELL:=/usr/bin/bash
 .SECONDEXPANSION:
 .ONESHELL:
 
-# App description
-app_name:=clickpie-server
-app_version:=0.0.1
-app_vversion:=v$(app_version)
-app_distname:=$(app_name)-$(app_vversion)
+##################################################
+# Module directories
+##################################################
+srcdir_top=IN_SRCDIR
+srcdir_top_abs=IN_SRCDIR_ABS
+srcdir=$(srcdir_top)/src
+srcdir_abs=$(srcdir_top_abs)/src
+buildir_top=IN_CONFIGUREDIR
+buildir_top_abs=IN_CONFIGUREDIR_ABS
+buildir=IN_BUILDIR
+buildir_abs=IN_BUILDIR_ABS
 
-# App directories
-PREFIX=IN_PREFIX
-PKGDIR=IN_PKGDIR
-PKGDIR_ABS=IN_PKGDIR_ABS
-SRCDIR=IN_SRCDIR
-SRCDIR_ABS=IN_SRCDIR_ABS
-BUILDIR=IN_BUILDIR
-BUILDIR_ABS=IN_BUILDIR_ABS
-CACHEDIR=IN_CACHEDIR
-TEMPDIR=IN_TEMPDIR
-CONFDIR=IN_CONFDIR
-
-# Standard commands
-# ------------------------------
-install=/usr/bin/install
-mkdirp:=/usr/bin/mkdir -p
-sort:=/usr/bin/sort
-cp:=/usr/bin/cp
-rm:=/usr/bin/rm
-chmod:=/usr/bin/chmod
-m4:=/usr/bin/m4
-bash:=/usr/bin/bash
-
+##################################################
 # Tools and their configurations
-# ------------------------------
+##################################################
+esbuild=npx esbuild
 
-node:=IN_NODE
-dotenv:=IN_DOTENV
-esbuild:=IN_ESBUILD
-dotenvdirs:=$(CONFDIR)/env/* $(PKGDIR)/.env.*
-dotenvfile:=.env
-loadenv:=set -a; source $(dotenvfile)
-json2csv:=$(CONFDIR)/scripts/json2csv.jq
+##################################################
+# Inputs output
+##################################################
+in_clickpie_server=$(srcdir)/clickpie-server.js
+out_clickpie_server=clickpie-server.js
 
-
-all: build
-
-# Scratch
-scratch:
-	$(loadenv)
-	$(node) tmp/scratch.js
-
+##################################################
 # Build
-build:
+##################################################
+build: | $(buildir_abs)
+	$(esbuild) --bundle $(in_clickpie_server) \
+	--outdir=$(buildir) --platform=node --packages=external \
+	--target=esnext --format=esm
 
-# Serve
-serve: dotenv
-	@PATH=$(PKGDIR):$(PATH)
-ifndef inotify
-	rm -f server.log
-	[ ! -h clickpie-server-bundler ] && ln -sr -T $(esbuild) clickpie-server-bundler
-	[ ! -h clickpie-server-reloader ] && ln -s -T /usr/bin/inotifywait clickpie-server-reloader
+##################################################
+# Directories
+##################################################
+$(buildir_abs):
+	mkdir -p $@
 
-	clickpie-server-bundler \
-	$(SRCDIR)/clickpie-server.js --bundle --outdir=$(BUILDIR) \
-	--platform=node --packages=external --target=esnext --format=esm --watch=forever &>> server.log &
-
-	clickpie-server-reloader \
-	--monitor --event close $(BUILDIR)/clickpie-server.js -q | while read -r change; do
-	echo [inotify] clickpie-server-bundler $$change
-
-	echo [inotify] checking checksum
-	if [ ! -f $(BUILDIR)/sha256.txt ]; then
-	echo No sha256.txt file!
-	sha256sum -t $(BUILDIR)/clickpie-server.js > sha256.txt
-	echo checksum generated!
-	exit 0
-	elif ! sha256sum -c $(BUILDIR)/sha256.txt; then
-	echo Contents have indeed changed!
-	echo i should restart the server.
-	exit 0
-	fi
-	exit 0
-	if ! sha256sum -c $(BUILDIR)/sha256.txt; then
-	echo Contents have indeed changed
-	fi
-	fi
-	make serve inotify=true --silent &
-	done &>> server.log &
-	exit 0
-endif
-	[ ! -h clickpie-server ] && ln -s -T $(node) clickpie-server
-	exit 0
-	$(loadenv)
-	echo from notify
-	old_server=$$(ps -o command -o pid | grep ^clickpie-server[[:space:]] | cut -d' ' -f-3  --complement)
-	if [[ "$$old_server" != "" ]]; then
-	echo removing old server $$old_server
-	kill $$old_server
-	kill pgrep --full clickpie-server-reloader
-	fi
-	sleep 2
-	clickpie-server $(BUILDIR)/clickpie-server.js &
-	clickpie-server-reloader \
-	--monitor --event close $(BUILDIR)/clickpie-server.js -q | while read -r change; do
-	echo [inotify] clickpie-server-bundler $$change
-	make serve inotify=true --silent &
-	done &>> server.log &
-	exit 0
-# $(loadenv)
-# kill $$(pgrep --full clickpie-exec)
-# clickpie-exec $(BUILDIR)/clickpie-server.js &
-# exit 0
-
-stop:
-	@for proc in $$(pgrep clickpie-server); do
-	echo $$proc
-	kill $$proc
-	done
-
-run: file=
-run: dotenv $(file)
-	@if [[ "$${file:-}" == "" ]]; then
-	echo "Usage: 'make run file [args]'"
-	exit 1
-	fi
-	extension="$${file##*.}"
-	$(loadenv)
-	case $$extension in
-	sh)
-	$(SHELL) $(file) $(args)
-	;;
-	js)
-	$(node) $(file) $(args)
-	;;
-	*)
-	echo "Unrecognized extension: $$extension"
-	echo "Failed to 'make $@ $^'"
-	;;
-	esac
-
-.DEFAULT:
-	@if [ ! -f "$<" ]; then
-	echo "Missing file $${file:-}"
-	exit 1
-	fi
-
-dotenv:
-	$(dotenv) $(dotenvflags) $(dotenvdirs) | sort > $(dotenvfile)
-
-clean:
-	-rm -rf build
-	-rm -rf dist
-	-rm -f *.log
-	-rm -f $(dotenvfile)
-
-distclean: clean
-	-rm -rf node_modules
-	-rm -f package-lock.json
-	-rm -f macros.m4
-	-rm -f .env*
-
+##################################################
+# help
+##################################################
 help:
 	@cat ./Makefile | grep -i --color=auto 'phony' | cut -d ' ' -f2- | tail --lines=+3
 
-.PHONY: help
-# General setup of the repository
-.PHONY: all # build application
 # Software development
-.PHONY: serve # serve service
 .PHONY: run # read dotenvfile and run any file
 .PHONY: scratch # read dotenvfile and run the scratch file
-.PHONY: dotenv # write environment into .env
 .PHONY: build # build application
+.PHONY: start # start application
+.PHONY: stop # stop application
+# Software distribution
+.PHONY: deploy # deploy the application to the consumer, such as a server
 # Cleaning
-.PHONY: clean # Remove files created by make build, install, package, dist...
+.PHONY: clean # Remove files created by make targets
 .PHONY: distclean # Remove files created by configure
-# Miscellaenous
+# Misc
+.PHONY: help
+.PHONY: dotenv # write environment into .env
+.PHONY: all # default target

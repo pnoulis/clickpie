@@ -5,7 +5,7 @@ printenv > $pre_config_env
 post_config_env=$(mktemp)
 
 # App description
-export PKG_NAME=clickpie-software
+export PKG_NAME=clickpie
 export PKG_VERSION=0.0.1
 export PKG_VVERSION=v${PKG_VERSION}
 export PKG_DISTNAME=${PKG_NAME}-${PKG_VVERSION}
@@ -24,6 +24,22 @@ export CLICKPIE_SERVER_URL_PUBLIC=
 export CLICKPIE_SERVER_URL_LOCAL=
 export LOGLEVEL=debug
 
+# CONSTANTS
+export CLICKUP_API_URL='https://api.clickup.com/api/v2'
+export PREFIX=
+export EXEC_PREFIX=
+export BINDIR=
+export SBINDIR=
+export LIBEXECDIR=
+export DATAROOTDIR=
+export DATADIR=
+export SYSCONFDIR=
+export LOCALSTATEDIR=
+export RUNSTATEDIR=
+export INCLUDEDIR=
+export LIBDIR=
+
+
 main() {
   parse_args "$@"
   set -- "${POSARGS[@]}"
@@ -38,6 +54,7 @@ main() {
   resolve_clickpie_server_url
   resolve_clickpie_api_url
   resolve_xdgdirs
+  declare_installdirs
   define_installdirs_$WITH_INSTALLDIRS_PRESET
   show_installdirs
   define_derivedirs
@@ -86,7 +103,7 @@ resolve_system() {
   declare -gx BUILD_DISTRO_CODENAME=
 
   if [ -f "/etc/os-release" ]; then
-    BUILD_DISTRO="$(awk 'BEGIN { FS = "=" }; $1 ~ /^PRETTY_NAME$/ { print $2 }' /etc/os-release)"
+    BUILD_DISTRO="$(strip_quotes $(awk 'BEGIN { FS = "=" }; $1 ~ /^PRETTY_NAME$/ { print $2 }' /etc/os-release))"
     BUILD_DISTRO_NAME="$(awk 'BEGIN { FS = "=" }; $1 ~ /^ID$/ { print $2 }' /etc/os-release)"
     BUILD_DISTRO_VERSION="$(awk 'BEGIN { FS = "=" }; $1 ~ /^VERSION_ID$/ { print $2 }' /etc/os-release)"
     BUILD_DISTRO_CODENAME="$(awk 'BEGIN { FS = "=" }; $1 ~ /^VERSION_CODENAME$/ { print $2 }' /etc/os-release)"
@@ -113,15 +130,15 @@ resolve_system() {
   echo "BUILD_DISTRO_VERSION...|$BUILD_DISTRO_VERSION"
   echo "BUILD_DISTRO_CODENAME...|$BUILD_DISTRO_CODENAME"
 
-  HOST_ARCH_SPECIFIER="$BUILD_ARCH_SPECIFIER"
-  HOST_CPU="$BUILD_CPU"
-  HOST_KERNEL="$BUILD_KERNEL"
-  HOST_SYSTEM="$BUILD_SYSTEM"
-  HOST_OS="$BUILD_OS"
-  HOST_DISTRO="$BUILD_DISTRO"
-  HOST_DISTRO_NAME="$BUILD_DISTRO_NAME"
-  HOST_DISTRO_VERSION="$BUILD_DISTRO_VERSION"
-  HOST_DISTRO_CODENAME="$BUILD_DISTRO_CODENAME"
+  declare -gx HOST_ARCH_SPECIFIER="$BUILD_ARCH_SPECIFIER"
+  declare -gx HOST_CPU="$BUILD_CPU"
+  declare -gx HOST_KERNEL="$BUILD_KERNEL"
+  declare -gx HOST_SYSTEM="$BUILD_SYSTEM"
+  declare -gx HOST_OS="$BUILD_OS"
+  declare -gx HOST_DISTRO="$BUILD_DISTRO"
+  declare -gx HOST_DISTRO_NAME="$BUILD_DISTRO_NAME"
+  declare -gx HOST_DISTRO_VERSION="$BUILD_DISTRO_VERSION"
+  declare -gx HOST_DISTRO_CODENAME="$BUILD_DISTRO_CODENAME"
 
   echo "HOST_ARCH_SPECIFIER...|$HOST_ARCH_SPECIFIER"
   echo "HOST_CPU...|$HOST_CPU"
@@ -392,7 +409,7 @@ define_installdirs_srv() {
   DATADIR=${DATAROOTDIR}
 }
 define_installdirs_gnu_prefix() {
-  PREFIX=/usr/local
+  PREFIX="${PREFIX:-/usr/local}"
   EXEC_PREFIX=$PREFIX
   BINDIR=${EXEC_PREFIX}/bin
   SBINDIR=${EXEC_PREFIX}/sbin
@@ -578,7 +595,7 @@ EOF
 
 create_makefile() {
   print_chapter "Creating makefile..."
-  OUT_CONFIG_MAKEFILE=${CONFIGUREDIR}/Makefile
+  declare -gx OUT_CONFIG_MAKEFILE=${CONFIGUREDIR}/Makefile
   OUT_CONFIG_MAKEFILE_abs=${CONFIGUREDIR_ABS}/Makefile
   in_makefile=${SRCDIR}/Makefile.in
 

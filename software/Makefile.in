@@ -64,6 +64,11 @@ installdir_lock=IN_LOCKDIR
 installdir_lock_pkg=IN_LOCKDIR_PKG
 tmpdir=IN_TMPDIR
 
+##################################################
+# Derived dirs
+##################################################
+logpath=$(installdir_log_pkg)/$(pkg_name).log
+tmpdir_pkg=$(tmpdir)/$(pkg_name)
 
 ##################################################
 # Tools and their configurations
@@ -71,7 +76,8 @@ tmpdir=IN_TMPDIR
 # node
 node:=IN_NODE
 # dotenv
-dotenvdirs:=IN_CONFIG_ENVFILE $(srcdir_top)/.env.*
+dotenv=IN_DOTENV
+dotenvdirs:=IN_CONFIG_ENVFILE $(srcdir_top)
 dotenvfile:=$(srcdir_top)/.env
 loadenv=set -a; source $(dotenvfile)
 # jq
@@ -79,13 +85,89 @@ jq:=IN_JQ
 json2csv:=$(scriptdir)/json2csv.jq
 # inotifywait
 inotifywait:=IN_INOTIFYWAIT
+# esubild
+esbuild=npx esbuild
 
 ##################################################
 # Misc
 ##################################################
 script_commons=$(scriptdir)/script-template.sh
 
+##################################################
+# io
+##################################################
+in_clickpie_server=$(srcdir_abs)/clickpie-server.js
+out_clickpie_server=$(buildir_abs)/clickpie-server.js
 
+all: build
+
+##################################################
+# Build
+##################################################
+build: dotenv | $(buildir_abs)
+	$(esbuild) --bundle $(in_clickpie_server) \
+	--outdir=$(buildir) --platform=node \
+	--target=esnext --format=esm
+
+buildclean: | $(buildir_abs)
+	rm -rf $(buildir)/*
+
+##################################################
+# Start
+##################################################
+start: link_bundler=clickpie-server-bundler
+start: link_reloader=clickpie-server-reloader
+start: link_server=clickpie-server
+start: build dotenv | $(installdir_log_pkg) $(tmpdir_pkg)
+# Change over to tmpdir_pkg
+	@PATH='$(tmpdir_pkg):$(PATH)'
+	cd $(tmpdir_pkg)
+ifndef inotify
+# Create links to esbuild, inotifywait and node
+	if ! [[ -h $(link_bundler) && -h $(link_reloader) && -h $(link_server) ]]; then
+		ln -sfr -T $(esbuild) $(link_bundler)
+		ln -sfr -T $(inotifywait) $(link_reloader)
+		ln -sfr -T $(node) $(link_server)
+	fi
+# Clear previous logs
+	rm -f $(logpath)
+# Spawn bundler daemon
+	$(link_bundler) --bundle $(in_clickpie_server) \
+	--outdir=$(buildir) --platform=node \
+	--target=esnext --format=esm \
+	--watch=forever &>> $(logpath) &
+# Spawn reloader daemon
+	$(link_reloader) $(out_clickpie_server) \
+	--monitor --event modify --quiet \
+	while read -r change; do
+		echo [RELOADER] $$change
+		make -C $(srcdir_top_abs) serve inotify=true --silent &
+	done &>> $(logpath) &
+	exit 0
+endif
+# FOLLOWING STATEMENTS ARE EXECUTED BY THE RELOADER DAEMON
+# AND OUTPUT DIRECTECTED to logpath
+# Remove old server daemon
+	old_daemon=$$(ps -o command -o pid \
+	| grep '^$(link_server)[[:space:]]' \
+	| cut -d' ' -f-3 --complement)
+	if [ -n "$$old_daemon" ]; then
+		echo [RELOADER] Removing old server daemon "$$old_daemon"
+		kill "$$old_daemon"
+	fi
+	echo [RELOADER] Starting server daemon
+# Starting new server daemon
+	$(loadenv)
+	$(link_server) $(out_clickpie_server) &>> $(logpath) &
+
+##################################################
+# Stop
+##################################################
+stop:
+	@for proc in $$(pgrep clickpie-server); do
+		echo $$proc
+		kill $$proc
+	done
 
 ##################################################
 # scratch
@@ -131,13 +213,13 @@ clean:
 	-rm -f *.tar.gz
 	-rm -f *.log
 	-rm -f $(dotenvfile)
-	-rm -f *~
-	-rm -f .#*
 
 ##################################################
 # distclean
 ##################################################
-distclean:
+distclean: clean
+	-rm -f *~
+	-rm -f .#*
 	-rm -rf $(buildir)
 	-rm -rf node_modules
 	-rm -f package-lock.json
@@ -154,6 +236,19 @@ distclean:
 	echo "Missing file $${file:-}"
 	exit 1
 	fi
+
+##################################################
+# directories
+##################################################
+$(buildir_abs):
+	mkdir -p $@
+
+$(installdir_log_pkg):
+	mkdir -p $@
+
+$(tmpdir_pkg):
+	mkdir -p $@
+
 
 ##################################################
 # help
