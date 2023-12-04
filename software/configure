@@ -1,45 +1,19 @@
-#!/usr/bin/bash
-
-set -o pipefail
-
-printf "Resolving package directories...\n"
-
-declare -gx CONFIGUREDIR_ABS="$(pwd)"
-echo "CONFIGUREDIR_ABS...|$CONFIGUREDIR_ABS"
-
-declare -gx SRCDIR_ABS="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" 2>/dev/null && pwd)"
-echo "SRCDIR_ABS...|$SRCDIR_ABS"
-
-declare -gx CONFIGUREDIR="$(realpath -e --relative-to="$SRCDIR_ABS" "$CONFIGUREDIR_ABS")"
-echo "CONFIGUREDIR...|$CONFIGUREDIR"
-
-declare -gx SRCDIR="$(realpath -e --relative-to="$CONFIGUREDIR_ABS" "$SRCDIR_ABS")"
-echo "SRCDIR...|$SRCDIR"
-
-echo "BUILDIR_STEM...|$BUILDIR_STEM"
-declare -gx BUILDIR_ABS="${CONFIGUREDIR_ABS}/$BUILDIR_STEM"
-echo "BUILDIR_ABS...|$BUILDIR_ABS"
-
-declare -gx BUILDIR="$(realpath -m --relative-to="$SRCDIR_ABS" "$BUILDIR_ABS")"
-echo "BUILDIR...|$BUILDIR"
-
-exit 0
-
+#!/usr/bin/env bash
 
 pre_config_env=$(mktemp)
-post_config_env=$(mktemp)
-in_makefile=Makefile.in
-in_secrets=../.secrets.gpg
-out_secrets=.secrets
-out_envfile=.env.conf
-out_macrosfile=macros.m4
-out_makefile=Makefile
-
-
 printenv > $pre_config_env
+post_config_env=$(mktemp)
+
+# App description
+export PKG_NAME=clickpie-software
+export PKG_VERSION=0.0.1
+export PKG_VVERSION=v${PKG_VERSION}
+export PKG_DISTNAME=${PKG_NAME}-${PKG_VVERSION}
+export API_VERSION=1
+export API_VVERSION=v${API_VERSION}
 
 # OPTIONS
-MODE=production
+export MODE=production
 WITH_CLICKUP_TARGET=IE
 WITH_DEPLOY_TARGET=IE_CLOUD
 WITH_GCLOUD_TARGET=PN
@@ -50,211 +24,258 @@ export CLICKPIE_SERVER_URL_PUBLIC=
 export CLICKPIE_SERVER_URL_LOCAL=
 export LOGLEVEL=debug
 
-# Installation directories
-export PREFIX=
-export EXEC_PREFIX=
-export BINDIR=
-export SBINDIR=
-export LIBEXECDIR=
-export DATAROOTDIR=
-export DATADIR=
-export SYSCONFDIR=
-export SHAREDSTATEDIR=
-export LOCALSTATEDIR=
-export RUNSTATEDIR=
-export INCLUDEDIR=
-export DOCDIR=
-export LIBDIR=
-export LOCALEDIR=
-
-# EXPORT until set +o allexport
-# --------------------------------------------------------------------------------
-set -o allexport
-
-# System Analysis
-BUILD_ARCH_SPECIFIER=$(basename $(systemd-path system-library-arch))
-HOST_ARCH_SPECIFIER=$BUILD_ARCH_SPECIFIER
-TARGET_ARCH_SPECIFIER=$HOST_ARCH_SPECIFIER
-
-# App description
-PKG_NAME=clickpie-software
-PKG_VERSION=0.0.1
-PKG_VVERSION=v${PKG_VERSION}
-PKG_DISTNAME=${PKG_NAME}-${PKG_VVERSION}
-API_VERSION=1
-API_VVERSION=v${API_VERSION}
-
-# Miscellaneous
-NODE_ENV=
-
-# Tools
-ESBUILD=${SRCDIR_ABS}/node_modules/.bin/esbuild
-DOTENV=${HOME}/bin/dotenv
-NODE=${HOME}/.nvm/versions/node/v21.0.0/bin/node
-
-# Clickup credentials
-CLICKUP_LOGIN_USERNAME=
-CLICKUP_LOGIN_PASS=
-CLICKUP_LOGIN_AUTH_TOKEN=
-
-# Clickup API url
-CLICKUP_API_URL='https://api.clickup.com/api/v2'
-
-# clickpie-server, servicing both UI clients and API clients
-# public url
-CLICKPIE_SERVER_URL_PUBLIC_SCHEME=
-CLICKPIE_SERVER_URL_PUBLIC_PORT=
-CLICKPIE_SERVER_URL_PUBLIC_HOSTNAME=
-# local url
-CLICKPIE_SERVER_URL_LOCAL_SCHEME=
-CLICKPIE_SERVER_URL_LOCAL_PORT=
-CLICKPIE_SERVER_URL_LOCAL_HOSTNAME=
-# clickpie-api, serviced by clickpie-server
-# public url
-CLICKPIE_API_URL_PUBLIC_SCHEME=
-CLICKPIE_API_URL_PUBLIC_PORT=
-CLICKPIE_API_URL_PUBLIC_HOSTNAME=
-CLICKPIE_API_URL_PUBLIC=
-# local url
-CLICKPIE_API_URL_LOCAL_SCHEME=
-CLICKPIE_API_URL_LOCAL_PORT=
-CLICKPIE_API_URL_LOCAL_HOSTNAME=
-CLICKPIE_API_URL_LOCAL=
-
-set +o allexport
-
 main() {
   parse_args "$@"
   set -- "${POSARGS[@]}"
-
-  NODE_ENV="$MODE"
-  printf "Configuring...\n"
-  resolve_pkgdirs
+  echo "Configuring..."
+  resolve_buildir
   resolve_system
-  printf "Resolving --mode...|%s\n" "$MODE"
-
-  printf "Checking dependency...|node-v21.0.0...|"
-  __node_path="$(command -v node)"
-  [[ -z "$__node_path" ]] && {
-    echo MISSING
-    exit 1
-  }
-  __node_version="$(node --version)"
-  [[ "$__node_version" != "v21.0.0" ]] && {
-    echo MISSING
-    exit 1
-  }
-  echo "$__node_path"
-
-  printf "Checking dependency...|make...|"
-  if ! command -v make; then
-    echo MISSING
-    exit 1
-  fi
-
-  printf "Checking dependency...|jq...|"
-  if ! command -v jq; then
-    echo MISSING
-    exit 1
-  fi
-
-  printf "Checking dependency...|inotifywait...|"
-  if ! command -v inotifywait; then
-    echo MISSING
-    exit 1
-  fi
-
-  printf "Checking dependency...|dotenv...|"
-  if ! command -v dotenv; then
-    echo MISSING
-    exit 1
-  fi
-
-  printf "Installing packages..."
-  log_npm_install=$(mktemp)
-  if flag SKIP_NPM_INSTALL; then
-    echo SKIP
-  else
-    npm install &> $log_npm_install
-    printf "INSTALLED\n"
-    cat $log_npm_install
-    rm -f $log_npm_install
-  fi
-
-
-  printf "Decrypting secrets...|%s\n" "$out_secrets"
-  if ! ( [ -f "$out_secrets" ] || gpg --decrypt --quiet "$in_secrets" > "$out_secrets" ); then
-    error "Failed to decrypt $in_secrets"
-  fi
-  source "$out_secrets"
-
-  printf "Resolving --with-clickup-target...|%s\n" "$WITH_CLICKUP_TARGET"
-  CLICKUP_LOGIN_TARGET=CLICKUP_LOGIN_${WITH_CLICKUP_TARGET}
-  CLICKUP_LOGIN_USERNAME="$(expand "${CLICKUP_LOGIN_TARGET}_USERNAME")"
-  CLICKUP_LOGIN_PASS="$(expand "${CLICKUP_LOGIN_TARGET}_PASS")"
-  CLICKUP_LOGIN_AUTH_TOKEN="$(expand "${CLICKUP_LOGIN_TARGET}_TOKEN")"
-
-  # clickpie-server, servicing both UI clients and API clients
-  # public url
-  printf "Resolving --server-public-url...|%s\n" "$CLICKPIE_SERVER_URL_PUBLIC"
-  read -r scheme hostname port < <(parseUrl "$CLICKPIE_SERVER_URL_PUBLIC")
-  if [[ "$scheme" == '' || "$hostname" == '' || "$port" == '' ]]; then
-    error 'clickpie-server public url missing either scheme, hostname or port'
-  fi
-  CLICKPIE_SERVER_URL_PUBLIC_SCHEME="$scheme"
-  CLICKPIE_SERVER_URL_PUBLIC_PORT="$port"
-  CLICKPIE_SERVER_URL_PUBLIC_HOSTNAME="$hostname"
-  CLICKPIE_SERVER_URL_PUBLIC_URL="${scheme}"://"${hostname}":"${port}"
-  # local url
-  printf "Resolving --server-local-url...|%s\n" "$CLICKPIE_SERVER_URL_LOCAL"
-  read -r scheme hostname port < <(parseUrl "$CLICKPIE_SERVER_URL_LOCAL")
-  if [[ "$scheme" == '' || "$hostname" == '' || "$port" == '' ]]; then
-    error 'clickpie-server local url missing either scheme, hostname or port'
-  fi
-  CLICKPIE_SERVER_URL_LOCAL_SCHEME="$scheme"
-  CLICKPIE_SERVER_URL_LOCAL_PORT="$port"
-  CLICKPIE_SERVER_URL_LOCAL_HOSTNAME="$hostname"
-  CLICKPIE_SERVER_URL_LOCAL="${scheme}"://"${hostname}":"${port}"
-
-  # clickpie-api, serviced by clickpie-server
-  # public url
-  CLICKPIE_API_URL_PUBLIC_SCHEME="${CLICKPIE_SERVER_URL_PUBLIC_SCHEME}"
-  CLICKPIE_API_URL_PUBLIC_PORT="${CLICKPIE_SERVER_URL_PUBLIC_PORT}"
-  CLICKPIE_API_URL_PUBLIC_HOSTNAME="${CLICKPIE_SERVER_URL_PUBLIC_HOSTNAME}"
-  CLICKPIE_API_URL_PUBLIC="${CLICKPIE_API_URL_PUBLIC_SCHEME}"://"${CLICKPIE_API_URL_PUBLIC_HOSTNAME}":"${CLICKPIE_API_URL_PUBLIC_PORT}"/api/"${API_VVERSION}"
-  # local url
-  CLICKPIE_API_URL_LOCAL_SCHEME="${CLICKPIE_SERVER_URL_LOCAL_SCHEME}"
-  CLICKPIE_API_URL_LOCAL_PORT="${CLICKPIE_SERVER_URL_LOCAL_PORT}"
-  CLICKPIE_API_URL_LOCAL_HOSTNAME="${CLICKPIE_SERVER_URL_LOCAL_HOSTNAME}"
-  CLICKPIE_API_URL_LOCAL="${CLICKPIE_API_URL_LOCAL_SCHEME}"://"${CLICKPIE_API_URL_LOCAL_HOSTNAME}":"${CLICKPIE_API_URL_LOCAL_PORT}"/api/"${API_VVERSION}"
-
-
+  resolve_mode
+  resolve_dependencies
+  installing_npm_packages
+  decrypt_secrets
+  resolve_clickup_target
+  resolve_clickpie_server_url
+  resolve_clickpie_api_url
   resolve_xdgdirs
   define_installdirs_$WITH_INSTALLDIRS_PRESET
   show_installdirs
   define_derivedirs
-  define_env
-  exit 0
-  makefile
-  configure_clickpie_server
+  create_envfile
+  create_macrosfile
+  create_makefile
   cleanup
 }
 
-resolve_system() {
-  # System Analysis
-  declare -gx BUILD_ARCH_SPECIFIER=$(basename $(systemd-path system-library-arch))
-  echo "BUILD_ARCH_SPECIFIER...|$BUILD_ARCH_SPECIFIER"
-  declare -gx HOST_ARCH_SPECIFIER=$BUILD_ARCH_SPECIFIER
-  echo "HOST_ARCH_SPECIFIER...|$HOST_ARCH_SPECIFIER"
-  declare -gx TARGET_ARCH_SPECIFIER=$HOST_ARCH_SPECIFIER
-  echo "TARGET_ARCH_SPECIFIER...|$TARGET_ARCH_SPECIFIER"
+resolve_buildir() {
+  print_chapter "Resolving buildir..."
+  declare -gx CONFIGUREDIR_ABS="$(pwd)"
+  echo "CONFIGUREDIR_ABS...|$CONFIGUREDIR_ABS"
+
+  declare -gx SRCDIR_ABS="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" 2>/dev/null && pwd)"
+  echo "SRCDIR_ABS...|$SRCDIR_ABS"
+
+  declare -gx CONFIGUREDIR="$(realpath -e --relative-to="$SRCDIR_ABS" "$CONFIGUREDIR_ABS")"
+  echo "CONFIGUREDIR...|$CONFIGUREDIR"
+
+  declare -gx SRCDIR="$(realpath -e --relative-to="$CONFIGUREDIR_ABS" "$SRCDIR_ABS")"
+  echo "SRCDIR...|$SRCDIR"
+
+  echo "BUILDIR_STEM...|$BUILDIR_STEM"
+  declare -gx BUILDIR_ABS="${CONFIGUREDIR_ABS}${BUILDIR_STEM:+/$BUILDIR_STEM}"
+  echo "BUILDIR_ABS...|$BUILDIR_ABS"
+
+  declare -gx BUILDIR="$(realpath -m --relative-to="$SRCDIR_ABS" "$BUILDIR_ABS")"
+  echo "BUILDIR...|$BUILDIR"
 }
 
-resolve_pkgdirs() {
+resolve_system() {
+  print_chapter "Resolving system..."
+  declare -gx BUILD_ARCH_SPECIFIER=$(gcc -print-multiarch 2>/dev/null)
+  if [ -z "$LIB_MULTIARCH_TUPLE" ]; then
+    BUILD_ARCH_SPECIFIER=$(gcc -dumpmachine)
+  fi
+  IFS='-' read -r cpu kernel system <<<"$BUILD_ARCH_SPECIFIER"
+  declare -gx BUILD_CPU=$cpu
+  declare -gx BUILD_KERNEL=$kernel
+  declare -gx BUILD_SYSTEM=$system
+  declare -gx BUILD_OS="$(uname -o)"
+  declare -gx BUILD_DISTRO=
+  declare -gx BUILD_DISTRO_NAME=
+  declare -gx BUILD_DISTRO_VERSION=
+  declare -gx BUILD_DISTRO_CODENAME=
+
+  if [ -f "/etc/os-release" ]; then
+    BUILD_DISTRO="$(awk 'BEGIN { FS = "=" }; $1 ~ /^PRETTY_NAME$/ { print $2 }' /etc/os-release)"
+    BUILD_DISTRO_NAME="$(awk 'BEGIN { FS = "=" }; $1 ~ /^ID$/ { print $2 }' /etc/os-release)"
+    BUILD_DISTRO_VERSION="$(awk 'BEGIN { FS = "=" }; $1 ~ /^VERSION_ID$/ { print $2 }' /etc/os-release)"
+    BUILD_DISTRO_CODENAME="$(awk 'BEGIN { FS = "=" }; $1 ~ /^VERSION_CODENAME$/ { print $2 }' /etc/os-release)"
+  elif [ -f "/usr/lib/os-release" ]; then
+    BUILD_DISTRO="$(awk 'BEGIN { FS = "=" }; $1 ~ /^PRETTY_NAME$/ { print $2 }' /usr/lib/os-release)"
+    BUILD_DISTRO_NAME="$(awk 'BEGIN { FS = "=" }; $1 ~ /^ID$/ { print $2 }' /usr/lib/os-release)"
+    BUILD_DISTRO_VERSION="$(awk 'BEGIN { FS = "=" }; $1 ~ /^VERSION_ID$/ { print $2 }' /usr/lib/os-release)"
+    BUILD_DISTRO_CODENAME="$(awk 'BEGIN { FS = "=" }; $1 ~ /^VERSION_CODENAME$/ { print $2 }' /usr/lib/os-release)"
+  elif command -v lsb_release &>/dev/null; then
+    BUILD_DISTRO="$(lsb_release -d | cut -f2)"
+    BUILD_DISTRO_NAME="$(lsb_release -i | cut -f2)"
+    BUILD_DISTRO_VERSION="$(lsb_release -v | cut -f2)"
+    BUILD_DISTRO_CODENAME="$(lsb_release -c | cut -f2)"
+  else
+    error "Could not resolve system information"
+  fi
+  echo "BUILD_ARCH_SPECIFIER...|$BUILD_ARCH_SPECIFIER"
+  echo "BUILD_CPU...|$BUILD_CPU"
+  echo "BUILD_KERNEL...|$BUILD_KERNEL"
+  echo "BUILD_SYSTEM...|$BUILD_SYSTEM"
+  echo "BUILD_OS...|$BUILD_OS"
+  echo "BUILD_DISTRO...|$BUILD_DISTRO"
+  echo "BUILD_DISTRO_NAME...|$BUILD_DISTRO_NAME"
+  echo "BUILD_DISTRO_VERSION...|$BUILD_DISTRO_VERSION"
+  echo "BUILD_DISTRO_CODENAME...|$BUILD_DISTRO_CODENAME"
+
+  HOST_ARCH_SPECIFIER="$BUILD_ARCH_SPECIFIER"
+  HOST_CPU="$BUILD_CPU"
+  HOST_KERNEL="$BUILD_KERNEL"
+  HOST_SYSTEM="$BUILD_SYSTEM"
+  HOST_OS="$BUILD_OS"
+  HOST_DISTRO="$BUILD_DISTRO"
+  HOST_DISTRO_NAME="$BUILD_DISTRO_NAME"
+  HOST_DISTRO_VERSION="$BUILD_DISTRO_VERSION"
+  HOST_DISTRO_CODENAME="$BUILD_DISTRO_CODENAME"
+
+  echo "HOST_ARCH_SPECIFIER...|$HOST_ARCH_SPECIFIER"
+  echo "HOST_CPU...|$HOST_CPU"
+  echo "HOST_KERNEL...|$HOST_KERNEL"
+  echo "HOST_SYSTEM...|$HOST_SYSTEM"
+  echo "HOST_OS...|$HOST_OS"
+  echo "HOST_DISTRO...|$HOST_DISTRO"
+  echo "HOST_DISTRO_NAME...|$HOST_DISTRO_NAME"
+  echo "HOST_DISTRO_VERSION...|$HOST_DISTRO_VERSION"
+  echo "HOST_DISTRO_CODENAME...|$HOST_DISTRO_CODENAME"
+}
+
+resolve_mode() {
+  print_chapter "Resolving mode..."
+  echo "MODE...|$MODE"
+}
+
+resolve_dependencies() {
+  print_chapter "Resolving dependencies..."
+  printf "Checking dependency...|node-v21.0.0...|"
+  declare -gx NODE="$(command -v node)"
+  [[ -z "$NODE" ]] && {
+    error MISSING
   }
+  __node_version="$(node --version)"
+  [[ "$__node_version" != "v21.0.0" ]] && {
+    error MISSING
+  }
+  echo "$NODE"
+
+  printf "Checking dependency...|make...|"
+  if ! command -v make; then
+    error MISSING
+  fi
+
+  printf "Checking dependency...|jq...|"
+  declare -gx JQ="$(command -v jq)"
+  [[ -z "$JQ" ]] && {
+    error MISSING
+  }
+  echo "$JQ"
+
+  printf "Checking dependency...|inotifywait...|"
+  declare -gx INOTIFYWAIT="$(command -v inotifywait)"
+  [[ -z "$INOTIFYWAIT" ]] && {
+    error MISSING
+  }
+  echo "$INOTIFYWAIT"
+
+  printf "Checking dependency...|dotenv...|"
+  declare -gx DOTENV="$(command -v dotenv)"
+  [[ -z "$DOTENV" ]] && {
+    error MISSING
+  }
+  echo "$DOTENV"
+}
+
+installing_npm_packages() {
+  print_chapter "Installing npm packages..."
+  if flag SKIP_NPM_INSTALL; then
+    echo SKIP
+  else
+    if ! npm install; then
+      error 'Failed to install packages'
+    fi
+  fi
+}
+
+decrypt_secrets() {
+  print_chapter "Decrypting secrets..."
+  in_secrets=../.secrets.gpg
+  echo "secrets file input...|$in_secrets"
+  in_secrets="$(realpath -e $in_secrets)"
+  declare -gx OUT_CONFIG_SECRETSFILE=${CONFIGUREDIR}/.secrets
+  OUT_CONFIG_SECRETSFILE_abs=${CONFIGUREDIR_ABS}/.secrets
+  if [ ! -f "$OUT_CONFIG_SECRETSFILE" ]; then
+    if ! gpg --decrypt --quiet "$in_secrets" > "$OUT_CONFIG_SECRETSFILE"; then
+      error "Failed to decrypt $in_secrets"
+    fi
+  fi
+  source "$OUT_CONFIG_SECRETSFILE"
+  echo "OUT_CONFIG_SECRETSFILE...|$OUT_CONFIG_SECRETSFILE"
+  echo "OUT_CONFIG_SECRETSFILE_abs...|$OUT_CONFIG_SECRETSFILE_abs"
+}
+
+resolve_clickup_target() {
+  source .secrets
+  print_chapter "Resolving clickup target..."
+  echo "WITH_CLICKUP_TARGET...|$WITH_CLICKUP_TARGET"
+  CLICKUP_LOGIN_TARGET=CLICKUP_LOGIN_${WITH_CLICKUP_TARGET}
+  declare -gx CLICKUP_LOGIN_USERNAME="$(expand "${CLICKUP_LOGIN_TARGET}_USERNAME")"
+  echo "CLICKUP_LOGIN_USERNAME...|$CLICKUP_LOGIN_USERNAME"
+  declare -gx CLICKUP_LOGIN_PASS="$(expand "${CLICKUP_LOGIN_TARGET}_PASS")"
+  echo "CLICKUP_LOGIN_PASS...|$CLICKUP_LOGIN_PASS"
+  declare -gx CLICKUP_LOGIN_AUTH_TOKEN="$(expand "${CLICKUP_LOGIN_TARGET}_TOKEN")"
+  echo "CLICKUP_LOGIN_AUTH_TOKEN...|$CLICKUP_LOGIN_AUTH_TOKEN"
+}
+
+resolve_clickpie_server_url() {
+  print_chapter "Resolving clickpie server url..."
+
+  # public
+  read -r scheme hostname port < <(parseUrl "$CLICKPIE_SERVER_URL_PUBLIC")
+  if [[ "$scheme" == '' || "$hostname" == '' || "$port" == '' ]]; then
+    error 'clickpie-server public url missing either scheme, hostname or port'
+  fi
+  declare -gx CLICKPIE_SERVER_URL_PUBLIC_SCHEME="$scheme"
+  echo "CLICKPIE_SERVER_URL_PUBLIC_SCHEME...|$CLICKPIE_SERVER_URL_PUBLIC_SCHEME"
+  declare -gx CLICKPIE_SERVER_URL_PUBLIC_PORT="$port"
+  echo "CLICKPIE_SERVER_URL_PUBLIC_PORT...|$CLICKPIE_SERVER_URL_PUBLIC_PORT"
+  declare -gx CLICKPIE_SERVER_URL_PUBLIC_HOSTNAME="$hostname"
+  echo "CLICKPIE_SERVER_URL_PUBLIC_HOSTNAME...|$CLICKPIE_SERVER_URL_PUBLIC_HOSTNAME"
+  declare -gx CLICKPIE_SERVER_URL_PUBLIC="${scheme}"://"${hostname}":"${port}"
+  echo "CLICKPIE_SERVER_URL_PUBLIC...|$CLICKPIE_SERVER_URL_PUBLIC"
+
+  # local
+  read -r scheme hostname port < <(parseUrl "$CLICKPIE_SERVER_URL_LOCAL")
+  if [[ "$scheme" == '' || "$hostname" == '' || "$port" == '' ]]; then
+    error 'clickpie-server local url missing either scheme, hostname or port'
+  fi
+  declare -gx CLICKPIE_SERVER_URL_LOCAL_SCHEME="$scheme"
+  echo "CLICKPIE_SERVER_URL_LOCAL_SCHEME...|$CLICKPIE_SERVER_URL_LOCAL_SCHEME"
+  declare -gx CLICKPIE_SERVER_URL_LOCAL_PORT="$port"
+  echo "CLICKPIE_SERVER_URL_LOCAL_PORT...|$CLICKPIE_SERVER_URL_LOCAL_PORT"
+  declare -gx CLICKPIE_SERVER_URL_LOCAL_HOSTNAME="$hostname"
+  echo "CLICKPIE_SERVER_URL_LOCAL_HOSTNAME...|$CLICKPIE_SERVER_URL_LOCAL_HOSTNAME"
+  declare -gx CLICKPIE_SERVER_URL_LOCAL="${scheme}"://"${hostname}":"${port}"
+  echo "CLICKPIE_SERVER_URL_LOCAL...|$CLICKPIE_SERVER_URL_LOCAL"
+}
+
+resolve_clickpie_api_url() {
+  print_chapter "Resolving clickpie api url..."
+  # public
+  declare -gx CLICKPIE_API_URL_PUBLIC_SCHEME="${CLICKPIE_SERVER_URL_PUBLIC_SCHEME}"
+  echo "CLICKPIE_API_URL_PUBLIC_SCHEME...|$CLICKPIE_API_URL_PUBLIC_SCHEME"
+  declare -gx CLICKPIE_API_URL_PUBLIC_PORT="${CLICKPIE_SERVER_URL_PUBLIC_PORT}"
+  echo "CLICKPIE_API_URL_PUBLIC_PORT...|$CLICKPIE_API_URL_PUBLIC_PORT"
+  declare -gx CLICKPIE_API_URL_PUBLIC_HOSTNAME="${CLICKPIE_SERVER_URL_PUBLIC_HOSTNAME}"
+  echo "CLICKPIE_API_URL_PUBLIC_HOSTNAME...|$CLICKPIE_API_URL_PUBLIC_HOSTNAME"
+  declare -gx CLICKPIE_API_URL_PUBLIC="${CLICKPIE_API_URL_PUBLIC_SCHEME}"://"${CLICKPIE_API_URL_PUBLIC_HOSTNAME}":"${CLICKPIE_API_URL_PUBLIC_PORT}"/api/"${API_VVERSION}"
+  echo "CLICKPIE_API_URL_PUBLIC...|$CLICKPIE_API_URL_PUBLIC"
+  # local
+  declare -gx CLICKPIE_API_URL_LOCAL_SCHEME="${CLICKPIE_SERVER_URL_LOCAL_SCHEME}"
+  echo "CLICKPIE_API_URL_LOCAL_SCHEME...|$CLICKPIE_API_URL_LOCAL_SCHEME"
+  declare -gx CLICKPIE_API_URL_LOCAL_PORT="${CLICKPIE_SERVER_URL_LOCAL_PORT}"
+  echo "CLICKPIE_API_URL_LOCAL_PORT...|$CLICKPIE_API_URL_LOCAL_PORT"
+  declare -gx CLICKPIE_API_URL_LOCAL_HOSTNAME="${CLICKPIE_SERVER_URL_LOCAL_HOSTNAME}"
+  echo "CLICKPIE_API_URL_LOCAL_HOSTNAME...|$CLICKPIE_API_URL_LOCAL_HOSTNAME"
+  declare -gx CLICKPIE_API_URL_LOCAL="${CLICKPIE_API_URL_LOCAL_SCHEME}"://"${CLICKPIE_API_URL_LOCAL_HOSTNAME}":"${CLICKPIE_API_URL_LOCAL_PORT}"/api/"${API_VVERSION}"
+  echo "CLICKPIE_API_URL_LOCAL...|$CLICKPIE_API_URL_LOCAL"
+}
 
 resolve_xdgdirs() {
-  printf "Resolving XDG dirs...\n"
+  print_chapter "Resolving XDG dirs..."
   # XDG Base directories
   # https://specifications.freedesktop.org/basedir-spec/basedir-spec-0.8.html
 
@@ -386,7 +407,8 @@ define_installdirs_gnu_prefix() {
 }
 
 show_installdirs() {
-  printf "Defining installation directories with preset...|$WITH_INSTALLDIRS_PRESET\n"
+  print_chapter "Resolving installation dirs..."
+  echo "WITH_INSTALLDIRS_PRESET...|$WITH_INSTALLDIRS_PRESET"
   echo "PREFIX...|$PREFIX"
   echo "EXEC_PREFIX...|$EXEC_PREFIX"
   echo "BINDIR...|$BINDIR"
@@ -404,7 +426,7 @@ show_installdirs() {
 define_derivedirs() {
   # Persistent state and private data directories
   # Derived from $LOCALSTATEDIR
-  printf "Defining derived dirs...\n"
+  print_chapter "Defining derived dirs..."
   declare -gx LOCALSTATEDIR_PKG="${LOCALSTATEDIR}/lib/${PKG_NAME}"
   echo "LOCALSTATEDIR_PKG...|$LOCALSTATEDIR_PKG"
   declare -gx LOCALSTATEDIR_USR="${XDG_STATE_HOME}"
@@ -512,155 +534,67 @@ define_derivedirs() {
   echo "TMPDIR...|$TMPDIR"
 }
 
-define_installdirs() {
-  printf "Resolving installation directories...\n"
+create_envfile() {
+  print_chapter "Creating envfile..."
+  declare -gx OUT_CONFIG_ENVFILE=${CONFIGUREDIR}/env.conf
+  OUT_CONFIG_ENVFILE_abs=${CONFIGUREDIR_ABS}/env.conf
 
-  # De facto
-  PREFIX=
-  # Gnu standard
-  PREFIX=/usr/local
-  # Systemd
-  PREFIX=
-  # Development
-  isempty PREFIX && PREFIX="$(pwd)"
-  echo "PREFIX...|$(realpath -m --relative-to=. $PREFIX)"
+  printenv > $post_config_env
+  rm -f $OUT_CONFIG_ENVFILE
+  local unquoted_envars=$(mktemp)
+  diff --normal $pre_config_env $post_config_env | grep '^>' | cut -c3- | sort > $unquoted_envars
+  while IFS='=' read -r k v; do
+    # Quote values
+    if [[ "$v" =~ \' ]]; then
+      printf "%s=\"%s\"\n" "$k" "$v" >> $OUT_CONFIG_ENVFILE
+    else
+      printf "%s='%s'\n" "$k" "$v" >> $OUT_CONFIG_ENVFILE
+    fi
+  done < $unquoted_envars
 
-  # Gnu standard
-  EXEC_PREFIX="$PREFIX"
-  # De facto
-  EXEC_PREFIX=
-  # Development
-  isempty EXEC_PREFIX && EXEC_PREFIX="$PREFIX"
-  echo "EXEC_PREFIX...|$(realpath -m --relative-to=. $EXEC_PREFIX)"
-
-  # Gnu standard
-  BINDIR="${EXEC_PREFIX}/bin"
-  # De facto
-  BINDIR=/usr/bin
-  # Development
-  isempty BINDIR && BINDIR="${EXEC_PREFIX}/bin"
-  echo "BINDIR...|$(realpath -m --relative-to=. $BINDIR)"
-
-  # Gnu standard
-  SBINDIR="${EXEC_PREFIX}/sbin"
-  # De facto
-  SBINDIR=/usr/sbin
-  # Development
-  isempty SBINDIR && SBINDIR="${EXEC_PREFIX}/sbin"
-  echo "SBINDIR...|$(realpath -m --relative-to=. $SBINDIR)"
-
-  # Defacto
-  LIBEXECDIR=/usr/libexec/$PKG_NAME
-  # Gnu standard
-  LIBEXECDIR="${EXEC_PREFIX}/libexec"
-  # $(libexecdir)/package-name/machine/version.
-  # Systemd
-  LIBEXECDIR=/usr/lib/$PKG_NAME
-  # Development
-  isempty LIBEXECDIR && LIBEXECDIR="${EXEC_PREFIX}/libexec"
-  echo "LIBEXECDIR...|$(realpath -m --relative-to=. $LIBEXECDIR)"
-
-  # De facto
-  DATAROOTDIR=/usr/share
-  # Gnu standard
-  DATAROOTDIR="${PREFIX}/share"
-  # Systemd
-  DATAROOTDIR=/usr/share
-  # Development
-  isempty DATAROOTDIR && DATAROOTDIR="${PREFIX}/share"
-  echo "DATAROOTDIR...|$(realpath -m --relative-to=. $DATAROOTDIR)"
-
-  # De facto
-  DATADIR=/usr/share/$PKG_NAME
-  # Gnu standard
-  DATADIR="${DATAROOTDIR}/${PKG_NAME}"
-  # Systemd
-  DATADIR="${DATAROOTDIR}/${PKG_NAME}"
-
-  isempty DATADIR && DATADIR="${DATAROOTDIR}/${PKG_NAME}"
-  echo "DATADIR...|$(realpath -m --relative-to=. $DATADIR)"
-  isempty SYSCONFDIR && SYSCONFDIR="${PREFIX}/etc"
-  echo "SYSCONFDIR...|$(realpath -m --relative-to=. $SYSCONFDIR)"
-  isempty SHAREDSTATEDIR && SHAREDSTATEDIR="${PREFIX}/com"
-  echo "SHAREDSTATEDIR...|$(realpath -m --relative-to=. $SHAREDSTATEDIR)"
-
-  # GNU standard
-  isempty LOCALSTATEDIR && LOCALSTATEDIR="${PREFIX}/var"
-  # De facto
-  LOCALSTATEDIR=/var/lib/${PKG_NAME}
-  echo "LOCALSTATEDIR...|$(realpath -m --relative-to=. $LOCALSTATEDIR)"
-
-  # GNU standard
-  isempty RUNSTATEDIR && RUNSTATEDIR="${LOCALSTATEDIR}/run"
-  # De facto
-  RUNSTATEDIR=/run
-  echo "RUNSTATEDIR...|$(realpath -m --relative-to=. $RUNSTATEDIR)"
-
-  SYSTEM_TMPDIR_=
-  ENV_TMPDIR=
-  VAR_TMPDIR=
-
-  isempty INCLUDEDIR && INCLUDEDIR="${PREFIX}/include"
-  echo "INCLUDEDIR...|$(realpath -m --relative-to=. $INCLUDEDIR)"
-  isempty DOCDIR && DOCDIR="${DATAROOTDIR}/doc/${PKG_NAME}"
-  echo "DOCDIR...|$(realpath -m --relative-to=. $DOCDIR)"
-  isempty LIBDIR && LIBDIR="${LIBEXECDIR}/lib"
-  echo "LIBDIR...|$(realpath -m --relative-to=. $LIBDIR)"
+  rm -f $unquoted_envars
+  echo "OUT_CONFIG_ENVFILE...|$OUT_CONFIG_ENVFILE"
+  echo "OUT_CONFIG_ENVFILE_ABS...|$OUT_CONFIG_ENVFILE_abs"
 }
 
-expand() {
-  echo ${!1}
+create_macrosfile() {
+  print_chapter "Creating macrosfile..."
+  declare -gx OUT_CONFIG_MACROSFILE=${CONFIGUREDIR}/macros.m4
+  OUT_CONFIG_MACROSFILE_abs=${CONFIGUREDIR_ABS}/macros.m4
+
+  local unquoted_envars=$(mktemp)
+  diff --normal $pre_config_env $post_config_env | grep '^>' | cut -c3- | sort > $unquoted_envars
+  rm -f $OUT_CONFIG_MACROSFILE
+  while IFS='=' read -r key value; do
+    cat <<EOF >> $OUT_CONFIG_MACROSFILE
+define(\`IN_$key', \`$value')dnl
+EOF
+  done < $unquoted_envars
+
+  rm -f $unquoted_envars
+  echo "OUT_CONFIG_MACROSFILE...|$OUT_CONFIG_MACROSFILE"
+  echo "OUT_CONFIG_MACROSFILE_ABS...|$OUT_CONFIG_MACROSFILE_abs"
 }
 
-makefile() {
-  printf "Generating Makefile...|%s\n" "$out_makefile"
-  m4 $out_macrosfile $in_makefile > $out_makefile
-}
+create_makefile() {
+  print_chapter "Creating makefile..."
+  OUT_CONFIG_MAKEFILE=${CONFIGUREDIR}/Makefile
+  OUT_CONFIG_MAKEFILE_abs=${CONFIGUREDIR_ABS}/Makefile
+  in_makefile=${SRCDIR}/Makefile.in
 
-flag() {
-  local f="${!1:-}"
-  if [ "$f" == '' ]; then
-    error "Undefined flag: $1"
-  elif [ "$f" == true ]; then
-    return 0
-  else
-    return 1
-  fi
-}
+  m4 -DIN_CONFIG_MAKEFILE=$OUT_CONFIG_MAKEFILE \
+     -DIN_CONFIG_ENVFILE=$OUT_CONFIG_ENVFILE \
+     -DIN_CONFIG_MACROSFILE=$OUT_CONFIG_MACROSFILE \
+     -DIN_CONFIG_SECRETSFILE=$OUT_CONFIG_SECRETSFILE \
+     $OUT_CONFIG_MACROSFILE $in_makefile > $OUT_CONFIG_MAKEFILE
 
-isempty() {
-  local v="${!1:-}"
-  if [ "$v" == "" ]; then
-    return 0
-  else
-    return 1
-  fi
-}
-
-configure_clickpie_server() {
-  printf "Configuring clickpie-server...\n"
-  cd clickpie-server || exit 1
-  PKGDIR=.
-  PKGDIR_ABS=$(pwd)
-  SRCDIR=${PKGDIR}/src
-  SRCDIR_ABS=${PKGDIR_ABS}/src
-  BUILDIR=${PKGDIR}/build
-  BUILDIR_ABS=${PKGDIR_ABS}/build
-  CACHEDIR=${PREFIX}/var
-  TEMPDIR=${PREFIX}/var
-  CONFDIR=${PREFIX}/config
-  define_env
-  makefile
+  echo "OUT_CONFIG_MAKEFILE...|$OUT_CONFIG_MAKEFILE"
+  echo "OUT_CONFIG_MAKEFILE_abs...|$OUT_CONFIG_MAKEFILE_abs"
 }
 
 cleanup() {
-  rm $pre_config_env
-  rm $post_config_env
-}
-
-useparseurl() {
-  read -r scheme hostname port < <(parseUrl "http://localhost:5173")
-  echo $scheme $hostname $port
+  rm -f $pre_config_env
+  rm -f $post_config_env
 }
 
 parseUrl() {
@@ -676,27 +610,37 @@ parseUrl() {
   echo "$scheme" "$hostname" "$port"
 }
 
-define_env() {
-  printf "Defining environment...|%s\n" "$out_envfile"
-  printenv > $post_config_env
-  rm -f $out_envfile
-  local unquoted_envars=$(mktemp)
-  diff --normal $pre_config_env $post_config_env | grep '^>' | cut -c3- | sort > $unquoted_envars
-  while IFS='=' read -r k v; do
-    # Quote values
-    if [[ "$v" =~ \' ]]; then
-      printf "%s=\"%s\"\n" "$k" "$v" >> $out_envfile
-    else
-      printf "%s='%s'\n" "$k" "$v" >> $out_envfile
-    fi
-  done < $unquoted_envars
+expand() {
+  echo ${!1}
+}
 
-  rm -f $out_macrosfile
-  while IFS='=' read -r key value; do
-    cat <<EOF >> $out_macrosfile
-define(\`IN_$key', \`$value')dnl
-EOF
-  done < $unquoted_envars
+isempty() {
+  local v="${!1:-}"
+  if [ "$v" == "" ]; then
+    return 0
+  else
+    return 1
+  fi
+}
+
+flag() {
+  local f="${!1:-}"
+  if [ "$f" == '' ]; then
+    error "Undefined flag: $1"
+  elif [ "$f" == true ]; then
+    return 0
+  else
+    return 1
+  fi
+}
+
+strip_quotes() {
+  echo "${1//\"/}"
+}
+print_chapter() {
+  echo "##################################################"
+  echo "$@"
+  echo "##################################################"
 }
 
 parse_args(){
@@ -816,110 +760,4 @@ debug() {
   echo debug: "$@" >&2
 }
 
-debug_script_params() {
-  debug "Output format: $(quote $_OUTPUT_FORMAT)"
-  debug "Verbosity: $(quote $_VERBOSE)"
-  debug "Clickup Authorization token: $(quote $_USER_AUTH_TOKEN)"
-  debug "Clickup API prefix: $(quote $_CLICKUP_API_PREFIX)"
-  debug "Script json2csv: $(quote $_JSON2CSV)"
-  debug "Script commons: $(quote $_SCRIPT_COMMONS)"
-  debug "Workspace: $(quote $_WORKSPACE_ID)"
-  debug "Space: $(quote $_SPACE_ID)"
-  debug "Folder: $(quote $_FOLDER_ID)"
-  debug "List: $(quote $_LIST_ID)"
-}
-debug_xdg_dirs() {
-  echo XDG_DATA_HOME "${XDG_DATA_HOME}"
-  echo XDG_CONFIG_HOME "${XDG_CONFIG_HOME}"
-  echo XDG_STATE_HOME "${XDG_STATE_HOME}"
-  echo XDG_CACHE_HOME "${XDG_CACHE_HOME}"
-  echo XDG_RUNTIME_DIR "${XDG_RUNTIME_DIR}"
-  echo XDG_DATA_DIRS "${XDG_DATA_DIRS}"
-  echo XDG_CONFIG_DIRS "${XDG_CONFIG_DIRS}"
-  echo XDG_DESKTOP_DIR $XDG_DESKTOP_DIR
-  echo XDG_DOWNLOAD_DIR $XDG_DOWNLOAD_DIR
-  echo XDG_PUBLICSHARE_DIR $XDG_PUBLICSHARE_DIR
-  echo XDG_TEMPLATES_DIR $XDG_TEMPLATES_DIR
-  echo XDG_DOCUMENTS_DIR $XDG_DOCUMENTS_DIR
-  echo XDG_MUSIC_DIR $XDG_MUSIC_DIR
-  echo XDG_PICTURES_DIR $XDG_PICTURES_DIR
-  echo XDG_VIDEOS_DIR $XDG_VIDEOS_DIR
-}
-
-debug_dirs() {
-  echo Persistent state and private data directories
-  echo LOCALSTATEDIR $LOCALSTATEDIR
-  echo LOCALSTATEDIR_PKG $LOCALSTATEDIR_PKG
-  echo LOCALSTATEDIR_USR $LOCALSTATEDIR_USR
-  echo LOCALSTATEDIR_USR_PKG $LOCALSTATEDIR_USR_PKG
-  echo
-  echo Runtime data directories
-  echo RUNSTATEDIR $RUNSTATEDIR
-  echo RUNSTATEDIR_PKG $RUNSTATEDIR_PKG
-  echo RUNSTATEDIR_USR $RUNSTATEDIR_USR
-  echo RUNSTATEDIR_USR_PKG $RUNSTATEDIR_USR_PKG
-  echo
-  echo Libraries and read-only data directories
-  echo LIBDIR $LIBDIR
-  echo LIBDIR_PKG $LIBDIR_PKG
-  echo
-  echo Architecture-dependent libraries and read-only data directories
-  echo LIBDIR_ARCH $LIBDIR_ARCH
-  echo LIBDIR_ARCH_PKG $LIBDIR_ARCH_PKG
-  echo
-  echo Header files directories
-  echo INCLUDEDIR $INCLUDEDIR
-  echo INCLUDEDIR_PKG $INCLUDEDIR_PKG
-  echo
-  echo Architecture-dependent header files directories
-  echo   INCLUDEDIR_ARCH $INCLUDEDIR_ARCH
-  echo   INCLUDEDIR_ARCH_PKG $INCLUDEDIR_ARCH_PKG
-  echo
-  echo Package-run executables directories
-  echo   LIBEXECDIR $LIBEXECDIR
-  echo   LIBEXECDIR_PKG $LIBEXECDIR_PKG
-  echo
-  echo Configurations
-  echo   SYSCONFDIR $SYSCONFDIR
-  echo   SYSCONFDIR_PKG $SYSCONFDIR_PKG
-  echo   SYSCONFDIR_USR $SYSCONFDIR_USR
-  echo   SYSCONFDIR_USR_PKG $SYSCONFDIR_USR_PKG
-  echo
-  echo Application executables
-  echo   BINDIR $BINDIR
-  echo   BINDIR_USR $BINDIR_USR
-  echo
-  echo System executables
-  echo   SBINDIR $SBINDIR
-  echo   SBINDIR_USR $SBINDIR_USR
-  echo
-  echo Logs
-  echo   LOGDIR $LOGDIR
-  echo   LOGDIR_PKG $LOGDIR_PKG
-  echo
-  echo Persistent system cache data
-  echo   CACHEDIR $CACHEDIR
-  echo   CACHEDIR_PKG $CACHEDIR_PKG
-  echo   CACHEDIR_USR $CACHEDIR_USR
-  echo   CACHEDIR_USR_PKG $CACHEDIR_USR_PKG
-  echo
-  echo Persistent system spool data
-  echo   SPOOLDIR $SPOOLDIR
-  echo   SPOOLDIR_PKG $SPOOLDIR_PKG
-  echo
-  echo Lock directories
-  echo   LOCKDIR $LOCKDIR
-  echo   LOCKDIR_PKG $LOCKDIR_PKG
-  echo
-  echo Temporary files
-  echo   TMPDIR_ENV $TMPDIR_ENV
-  echo   TMPDIR_PERSISTENT $TMPDIR_PERSISTENT
-  echo   TMPDIR_FALLBACK $TMPDIR_FALLBACK
-  echo   TMPDIR $TMPDIR
-}
-
 main "$@"
-
-## Local Variables:
-## mode: script-mode
-## End:

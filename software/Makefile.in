@@ -131,6 +131,8 @@ clean:
 	-rm -f *.tar.gz
 	-rm -f *.log
 	-rm -f $(dotenvfile)
+	-rm -f *~
+	-rm -f .#*
 
 ##################################################
 # distclean
@@ -142,7 +144,7 @@ distclean:
 	-rm -f IN_CONFIG_MAKEFILE
 	-rm -f IN_CONFIG_ENVFILE
 	-rm -f IN_CONFIG_MACROSFILE
-	-rm -f IN_CONFIG_SECRETFILE
+	-rm -f IN_CONFIG_SECRETSFILE
 
 ##################################################
 # misc
