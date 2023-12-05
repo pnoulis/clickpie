@@ -1,8 +1,8 @@
-import * as env from "clickpie-commons/env";
-import { getClickupClient } from "clickpie-commons/ClickupClient";
-import { log } from 'clickpie-commons/log';
-import { Api } from "clickpie-api";
-import { Server } from "clickpie-server";
+import * as env from "../clickpie-commons/src/env.js";
+import { getClickupClient } from "../clickpie-commons/src/ClickupClient.js";
+import { log } from '../clickpie-commons/src/log.js';
+import { Api } from "../clickpie-api/src/index.js";
+import { Server } from "../clickpie-server/src/index.js";
 import process from 'node:process';
 
 const api = new Api({
