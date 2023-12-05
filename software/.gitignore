@@ -28,6 +28,7 @@ env.*
 .#*
 *~
 .pdf-view-restore
+.dir-locals.el
 
 # vim
 :w

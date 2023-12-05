@@ -60,6 +60,7 @@ main() {
   define_derivedirs
   create_envfile
   create_macrosfile
+  create_emacsfile
   create_makefile
   cleanup
 }
@@ -593,6 +594,16 @@ EOF
   echo "OUT_CONFIG_MACROSFILE_ABS...|$OUT_CONFIG_MACROSFILE_abs"
 }
 
+create_emacsfile() {
+  print_chapter "Creating emacsfile..."
+  declare -gx OUT_CONFIG_EMACSFILE=${CONFIGUREDIR}/.dir-locals.el
+  OUT_CONFIG_EMACSFILE_abs=${CONFIGUREDIR_ABS}/.dir-locals.el
+  in_emacsfile=${SRCDIR}/dir-locals.el.in
+  m4 $OUT_CONFIG_MACROSFILE $in_emacsfile > $OUT_CONFIG_EMACSFILE
+  echo "OUT_CONFIG_EMACSFILE...|$OUT_CONFIG_EMACSFILE"
+  echo "OUT_CONFIG_EMACSFILE_abs...|$OUT_CONFIG_EMACSFILE_abs"
+}
+
 create_makefile() {
   print_chapter "Creating makefile..."
   declare -gx OUT_CONFIG_MAKEFILE=${CONFIGUREDIR}/Makefile
@@ -603,11 +614,13 @@ create_makefile() {
      -DIN_CONFIG_ENVFILE=$OUT_CONFIG_ENVFILE \
      -DIN_CONFIG_MACROSFILE=$OUT_CONFIG_MACROSFILE \
      -DIN_CONFIG_SECRETSFILE=$OUT_CONFIG_SECRETSFILE \
+     -DIN_CONFIG_EMACSFILE=$OUT_CONFIG_EMACSFILE \
      $OUT_CONFIG_MACROSFILE $in_makefile > $OUT_CONFIG_MAKEFILE
 
   echo "OUT_CONFIG_MAKEFILE...|$OUT_CONFIG_MAKEFILE"
   echo "OUT_CONFIG_MAKEFILE_abs...|$OUT_CONFIG_MAKEFILE_abs"
 }
+
 
 cleanup() {
   rm -f $pre_config_env

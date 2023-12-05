@@ -86,6 +86,8 @@ json2csv:=$(scriptdir)/json2csv.jq
 inotifywait:=IN_INOTIFYWAIT
 # esubild
 esbuild=$(realpath $(srcdir_top)/node_modules/.bin/esbuild)
+# pretty output
+pretty_output=$(realpath $(srcdir_top)/node_modules/.bin/pretty)
 
 ##################################################
 # Misc
@@ -106,7 +108,7 @@ all: build
 build: buildclean dotenv | $(buildir_abs)
 	$(esbuild) --bundle $(in_clickpie_server) \
 	--outdir=$(buildir) --platform=node \
-	--target=esnext --format=esm --packages=external
+	--target=esnext --format=esm --packages=external $(args)
 
 buildclean: | $(buildir_abs)
 	rm -rf $(buildir)/*
@@ -223,7 +225,7 @@ dotenv:
 ##################################################
 # clean
 ##################################################
-clean:
+clean: stop
 	-rm -f *.tar.gz
 	-rm -f *.log
 	-rm -f $(dotenvfile)
@@ -233,6 +235,7 @@ clean:
 ##################################################
 distclean: clean
 	-rm -f *~
+	-rm -f .*~
 	-rm -f .#*
 	-rm -rf $(buildir)
 	-rm -rf node_modules
@@ -241,6 +244,7 @@ distclean: clean
 	-rm -f IN_CONFIG_ENVFILE
 	-rm -f IN_CONFIG_MACROSFILE
 	-rm -f IN_CONFIG_SECRETSFILE
+	-rm -f IN_CONFIG_EMACSFILE
 
 ##################################################
 # misc
