@@ -4,7 +4,6 @@
 # Make config
 ##################################################
 SHELL:=/usr/bin/bash
-.SHELLFLAGS:=-o errexit -o pipefail -c -o nounset
 .DEFAULT_GOAL:= all
 .DELETE_OR_ERROR:
 .EXPORT_ALL_VARIABLES:
@@ -78,7 +77,7 @@ node:=IN_NODE
 # dotenv
 dotenv=IN_DOTENV
 dotenvdirs:=IN_CONFIG_ENVFILE $(srcdir_top)
-dotenvfile:=$(srcdir_top)/.env
+dotenvfile:=$(srcdir_top_abs)/.env
 loadenv=set -a; source $(dotenvfile)
 # jq
 jq:=IN_JQ
@@ -86,7 +85,7 @@ json2csv:=$(scriptdir)/json2csv.jq
 # inotifywait
 inotifywait:=IN_INOTIFYWAIT
 # esubild
-esbuild=npx esbuild
+esbuild=$(realpath $(srcdir_top)/node_modules/.bin/esbuild)
 
 ##################################################
 # Misc
@@ -104,10 +103,10 @@ all: build
 ##################################################
 # Build
 ##################################################
-build: dotenv | $(buildir_abs)
+build: buildclean dotenv | $(buildir_abs)
 	$(esbuild) --bundle $(in_clickpie_server) \
 	--outdir=$(buildir) --platform=node \
-	--target=esnext --format=esm
+	--target=esnext --format=esm --packages=external
 
 buildclean: | $(buildir_abs)
 	rm -rf $(buildir)/*
@@ -117,48 +116,62 @@ buildclean: | $(buildir_abs)
 ##################################################
 start: link_bundler=clickpie-server-bundler
 start: link_reloader=clickpie-server-reloader
+start: link_polling=clickpie-server-polling
 start: link_server=clickpie-server
-start: build dotenv | $(installdir_log_pkg) $(tmpdir_pkg)
+start: build | $(installdir_log_pkg) $(tmpdir_pkg)
 # Change over to tmpdir_pkg
 	@PATH='$(tmpdir_pkg):$(PATH)'
 	cd $(tmpdir_pkg)
-ifndef inotify
 # Create links to esbuild, inotifywait and node
 	if ! [[ -h $(link_bundler) && -h $(link_reloader) && -h $(link_server) ]]; then
 		ln -sfr -T $(esbuild) $(link_bundler)
 		ln -sfr -T $(inotifywait) $(link_reloader)
 		ln -sfr -T $(node) $(link_server)
+		ln -sfr -T $(SHELL) $(link_polling)
 	fi
 # Clear previous logs
 	rm -f $(logpath)
 # Spawn bundler daemon
 	$(link_bundler) --bundle $(in_clickpie_server) \
-	--outdir=$(buildir) --platform=node \
+	--outdir=$(buildir_abs) --platform=node \
 	--target=esnext --format=esm \
-	--watch=forever &>> $(logpath) &
+	--watch=forever --packages=external &>> $(logpath) &
 # Spawn reloader daemon
-	$(link_reloader) $(out_clickpie_server) \
-	--monitor --event modify --quiet \
-	while read -r change; do
-		echo [RELOADER] $$change
-		make -C $(srcdir_top_abs) serve inotify=true --silent &
-	done &>> $(logpath) &
-	exit 0
-endif
-# FOLLOWING STATEMENTS ARE EXECUTED BY THE RELOADER DAEMON
-# AND OUTPUT DIRECTECTED to logpath
-# Remove old server daemon
-	old_daemon=$$(ps -o command -o pid \
-	| grep '^$(link_server)[[:space:]]' \
-	| cut -d' ' -f-3 --complement)
-	if [ -n "$$old_daemon" ]; then
-		echo [RELOADER] Removing old server daemon "$$old_daemon"
+	$(link_reloader) $(out_clickpie_server) --monitor --event modify --quiet | while read -r change; do
+		echo [INOTIFY] $$change
+		date +%s > $(tmpdir_pkg)/last_modified
+		old_daemon=$$(ps -o command -o pid | grep '^$(link_server)[[:space:]]' | cut -d' ' -f-3 --complement)
+		if [ -n "$$old_daemon" ]; then
+		echo [INOTIFY] Removing old server daemon "$$old_daemon"
 		kill "$$old_daemon"
+		fi
+	done &>> $(logpath) &
+# Use polling and timestamps to safeguard against rapid inotify_events
+# Create the polling script
+	if [ ! -f $(tmpdir_pkg)/polling.sh ]; then
+		cat <<EOF >$(tmpdir_pkg)/polling.sh
+		while :; do
+			sleep 3
+			now="\$$(date +%s)"
+			last_modified="\$$(stat -c %Y $(tmpdir_pkg)/last_modified)"
+			if (( \$$now - \$$last_modified > 3 )); then
+				old_daemon=\$$(ps -o command -o pid | grep '^$(link_server)[[:space:]]' | cut -d' ' -f-3 --complement)
+				[ -n "\$$old_daemon" ] && continue
+				$(loadenv)
+				echo [POLLING] Starting server daemon
+				$(link_server) $(out_clickpie_server) &
+			fi
+		done
+		EOF
+		chmod +x $(tmpdir_pkg)/polling.sh
 	fi
-	echo [RELOADER] Starting server daemon
-# Starting new server daemon
-	$(loadenv)
-	$(link_server) $(out_clickpie_server) &>> $(logpath) &
+# Spawn polling daemon
+	$(link_polling) $(tmpdir_pkg)/polling.sh &>> $(logpath) &
+ifndef daemon
+	trap "make -C $(srcdir_top_abs) stop" SIGINT SIGTERM
+	tail -f $(logpath)
+endif
+	exit 0
 
 ##################################################
 # Stop
@@ -168,6 +181,7 @@ stop:
 		echo $$proc
 		kill $$proc
 	done
+	rm -rf $(tmpdir_pkg)
 
 ##################################################
 # scratch
