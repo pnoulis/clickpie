@@ -2,6 +2,8 @@ import { default as Koa } from "koa";
 import { koaBody } from "koa-body";
 import { URL } from "node:url";
 import { createApiRoutes } from "./api-routes.js";
+import { log as prettyOut } from "log-parsed-json";
+
 class Server {
   constructor({ publicUrl, localUrl, api } = {}) {
     this.url = {
@@ -21,13 +23,25 @@ Server.prototype.start = async function () {
   this.server = new Koa();
 
   // Attaching middleware
+
+  // RESPONSE TIME middleware
   this.server.use(async (ctx, next) => {
     const start = Date.now();
     await next();
     const ms = Date.now() - start;
     ctx.set("X-Response-Time", `${ms}ms`);
   });
+
+  // BODY-PARSER middleware
   this.server.use(koaBody());
+
+  // FILL undefined body middleware
+  this.server.use(async (ctx, next) => {
+    ctx.request.body ??= {};
+    await next();
+  });
+
+  // LOGGER middleware
   this.server.use(async (ctx, next) => {
     log.info(
       `CLICKPIE-SERVER REQ ${ctx.method} ${ctx.request
@@ -37,6 +51,9 @@ Server.prototype.start = async function () {
     );
     log.trace(ctx.request.headers);
     log.info(ctx.request.body);
+    log.info(
+      "--------------------------------------------------------------------------------",
+    );
     try {
       await next();
       log.info(
@@ -46,12 +63,20 @@ Server.prototype.start = async function () {
           .at(0)} ${ctx.path}`,
       );
       log.trace(ctx.response.headers);
-      log.info(ctx.body);
+      prettyOut(ctx.body);
     } catch (err) {
-      log.error(err);
-      ctx.status = 500;
+      log.info(
+        `CLICKPIE-SERVER RES ${ctx.method} ${ctx.response
+          .get("Content-Type")
+          .split(";")
+          .at(0)} ${ctx.path}`,
+      );
+      prettyOut(err);
+      ctx.status = err.status || 500;
     }
   });
+
+  // API ROUTES
   this.server.use(createApiRoutes(this.api));
 
   this.server.listen(this.url.local.port, () =>
