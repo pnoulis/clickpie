@@ -39,6 +39,8 @@ export RUNSTATEDIR=
 export INCLUDEDIR=
 export LIBDIR=
 
+# Testing
+export TEST_WORKID=9015040672
 
 main() {
   parse_args "$@"

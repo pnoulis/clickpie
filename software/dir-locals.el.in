@@ -2,4 +2,5 @@
 ;;; For more information see (info "(emacs) Directory Variables")
 
 ((nil . ((eval . (setenv "clickpie" "IN_CLICKPIE_SERVER_URL_LOCAL"))
-          (eval . (setenv "clickpie_api" "IN_CLICKPIE_API_URL_LOCAL")))))
+          (eval . (setenv "clickpie_api" "IN_CLICKPIE_API_URL_LOCAL"))
+          (eval . (setenv "workid" "IN_TEST_WORKID")))))
