@@ -7,6 +7,18 @@ function createApiRoutes(api) {
     ctx.body = "index route";
   });
 
+  router.get("/workspaces", async function (ctx) {
+    const ww = await api.getWorkspaces({ quiet: true });
+    ctx.body = ww;
+    ctx.status = 200;
+  });
+
+  router.get("/webhooks", async function (ctx) {
+    const hooks = await api.getHooks();
+    ctx.body = hooks;
+    ctx.status = 200;
+  });
+
   router.get("/webhooks/:hookid", function (ctx) {
     const hookid = ctx.params.hookid;
     ctx.body = `INFO webhook ${hookid}`;
@@ -21,9 +33,12 @@ function createApiRoutes(api) {
     ctx.status = 200;
   });
 
-  router.put("/webhooks/:hookname", function (ctx) {
-    const hookname = ctx.params.hookname;
-    ctx.body = `CREATE webhook ${hookname}`;
+  router.put("/webhooks/:hookname", async function (ctx) {
+    const hook = await api.createHook({
+      hookname: ctx.params.hookname,
+      workid: ctx.request.body.workid,
+    });
+    ctx.body = hook;
     ctx.status = 200;
   });
 

@@ -16,9 +16,9 @@
   },
   "dependencies": {
     "@koa/router": "12.0.1",
-    "esbuild": "0.19.8",
     "koa": "2.14.2",
     "koa-body": "6.0.1",
+    "log-parsed-json": "0.0.44",
     "node-fetch": "3.3.2"
   }
 }

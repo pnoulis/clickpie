@@ -27,18 +27,43 @@ class Api {
       .then((ww) => ww.map((w) => w.webhooks).flat())
       .then((hh) => (quiet ? hh.map((h) => h.id) : hh));
   }
-  createHook({ name, events, workid, ...options } = {}) {
-    const params = {
-      events: events?.length > 1 ? events : "*",
-      spacid: options.spacid,
-      foldid: options.foldid,
-      listid: options.listid,
-      taskid: options.taskid,
-    };
-    if (!name) throw new ERR_INVALID_ARG_VALUE("name", name);
-    else if (!workid) throw new ERR_INVALID_ARG_VALUE("workid", workid);
-    const hookend = this.url.public.href + "/webhooks/" + name;
-    log.debug(`create hook: ${hookend}`);
+  /*
+    https://clickup.com/api/clickupreference/operation/CreateWebhook/
+   */
+  createHook({ hookname, workid, events, ...options } = {}) {
+    return new Promise((resolve, reject) => {
+      if (!hookname) {
+        reject(
+          new ERR_INVALID_ARG_VALUE({
+            arg: "hookname",
+            value: hookname,
+            status: 400,
+          }),
+        );
+      } else if (!workid) {
+        reject(
+          new ERR_INVALID_ARG_VALUE({
+            arg: "workid",
+            value: workid,
+            status: 400,
+          }),
+        );
+      }
+      // hook building
+      const hook = {
+        endpoint: this.url.public.href + "/webhooks/" + hookname,
+        events: events?.length > 1 ? events : "*",
+        space_id: options.spacid,
+        folder_id: options.foldid,
+        list_id: options.listid,
+        tastk_id: options.taskid,
+      };
+      log.info(hook);
+      this.clickup
+        .post(`/team/${workid}/webhook`, hook)
+        .then(resolve)
+        .catch(reject);
+    });
   }
 }
 
