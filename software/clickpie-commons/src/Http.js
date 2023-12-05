@@ -17,7 +17,11 @@ function parseArguments(path, body, options) {
 
 function checkStatus(response) {
   if (response.ok) return response;
-  throw new ERR_HTTP_RESPONSE({ url: response.url }, response);
+  throw new ERR_HTTP_RESPONSE({
+    status: response.status,
+    statusText: response.statusText,
+    cause: response,
+  });
 }
 
 function parseJSON(response) {
@@ -45,6 +49,7 @@ Http.prototype.get = function (path, options) {
 };
 
 Http.prototype.post = function (path, body, options) {
+  log.info(`HTTP POST ${this.url + path}`);
   return fetch(this.url + path, {
     method: "post",
     body: JSON.stringify(body),
