@@ -153,10 +153,10 @@ start: build | $(installdir_log_pkg) $(tmpdir_pkg)
 	if [ ! -f $(tmpdir_pkg)/polling.sh ]; then
 		cat <<EOF >$(tmpdir_pkg)/polling.sh
 		while :; do
-			sleep 3
+			sleep 2
 			now="\$$(date +%s)"
 			last_modified="\$$(stat -c %Y $(tmpdir_pkg)/last_modified)"
-			if (( \$$now - \$$last_modified > 3 )); then
+			if (( \$$now - \$$last_modified > 2 )); then
 				old_daemon=\$$(ps -o command -o pid | grep '^$(link_server)[[:space:]]' | cut -d' ' -f-3 --complement)
 				[ -n "\$$old_daemon" ] && continue
 				$(loadenv)
