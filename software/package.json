@@ -10,5 +10,8 @@
     "./clickpie-api",
     "./js_utils",
     "./clickpie-commons"
-  ]
+  ],
+  "dependencies": {
+    "esbuild": "0.19.8"
+  }
 }
