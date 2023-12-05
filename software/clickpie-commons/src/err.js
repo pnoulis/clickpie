@@ -6,40 +6,36 @@ class CustomError extends Error {
 }
 
 class ERR_INVALID_ARG_TYPE extends CustomError {
-  static code = 100;
-  constructor(arg, type) {
+  constructor({ arg, type, code } = {}) {
     super({
-      code: ERR_INVALID_ARG_TYPE.code,
+      code,
       msg: `Invalid type: '${type}' for argument: '${arg}'`,
     });
   }
 }
 
 class ERR_INVALID_ARG_VALUE extends CustomError {
-  static code = 101;
-  constructor(arg, value) {
+  constructor({ arg, value, code } = {}) {
     super({
-      code: ERR_INVALID_ARG_VALUE.code,
+      code,
       msg: `Invalid value: '${value}' for argument: '${arg}'`,
     });
   }
 }
 
 class ERR_MISSING_ARGS extends CustomError {
-  static code = 102;
-  constructor(fname) {
+  constructor({ fname, code } = {}) {
     super({
-      code: ERR_MISSING_ARGS.code,
+      code,
       msg: `Missing arguments for function: '${fname}'`,
     });
   }
 }
 
 class ERR_HTTP_RESPONSE extends CustomError {
-  static code = 103;
-  constructor(req, res) {
+  constructor({ req, res, code } = {}) {
     super({
-      code: ERR_HTTP_RESPONSE.code,
+      code,
       msg: `${res.status} ${res.statusText}`,
       req,
       res: {
