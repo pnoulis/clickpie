@@ -47,6 +47,7 @@ class ERR_HTTP_RESPONSE extends CustomError {
 }
 
 export {
+  CustomError,
   ERR_INVALID_ARG_TYPE,
   ERR_INVALID_ARG_VALUE,
   ERR_MISSING_ARGS,

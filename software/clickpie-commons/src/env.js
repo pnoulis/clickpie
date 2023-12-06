@@ -72,6 +72,7 @@ const CLICKPIE_API_URL_LOCAL_HOSTNAME = getEnvar(
   true,
 );
 const CLICKPIE_API_URL_LOCAL = getEnvar("CLICKPIE_API_URL_LOCAL", true);
+const LIBDIR_PKG = getEnvar("LIBDIR_PKG", true);
 
 export {
   CACHEDIR,
@@ -99,4 +100,5 @@ export {
   CLICKUP_LOGIN_USERNAME,
   CONFDIR,
   LOGLEVEL,
+  LIBDIR_PKG,
 };
