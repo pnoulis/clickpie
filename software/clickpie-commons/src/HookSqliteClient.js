@@ -1,95 +1,37 @@
-import sqlite from "better-sqlite3";
+import Sqlite from "better-sqlite3";
 import { LIBDIR_PKG } from "./env.js";
 import { mkdir } from "node:fs/promises";
 import { isObject } from "js_utils/misc";
 import { CustomError } from "./err.js";
 import { smallid } from "js_utils/uuid";
 
-await mkdir(LIBDIR_PKG, { recursive: true });
+class HookSqliteClient {
+  constructor({ dbdir } = {}) {
+    this.dbpath = dbdir;
+  }
 
-let db = new sqlite(`${LIBDIR_PKG}/hooks.db`);
-
-const _dropHooksTable = db.prepare(`
-DROP TABLE IF EXISTS 'hooks'
-`);
-
-const _hasHooksTable = db.prepare(`
-SELECT name from sqlite_schema
-WHERE type = 'table'
-AND name = 'hooks'
-`);
-
-const _createHooksTable = db.prepare(`
-CREATE TABLE IF NOT EXISTS 'hooks' (
-id TEXT NOT NULL,
-name TEXT NOT NULL,
-userid INTEGER,
-workid INTEGER,
-endpoint TEXT,
-events TEXT,
-taskid INTEGER,
-listid INTEGER,
-foldid INTEGER,
-spacid INTEGER,
-status TEXT,
-fail_count INTEGER,
-secret TEXT,
-PRIMARY KEY (id, name)
-)`);
-
-_createHooksTable.run();
-
-log.info("Connected to db:hooks");
-
-const _insertHook = db.prepare(`
-INSERT INTO 'hooks'
-VALUES (
-@id,
-@name,
-@userid,
-@workid,
-@endpoint,
-@events,
-@taskid,
-@listid,
-@foldid,
-@spacid,
-@status,
-@fail_count,
-@secret
-)`);
-
-const _getHook = db.prepare(
-  `SELECT * from 'hooks' WHERE id = @id OR name = @name`,
-);
-const _getAllHooks = db.prepare(`SELECT * from 'hooks'`);
-const _rmHook = db.prepare(
-  `DELETE from 'hooks' WHERE id = @id OR name = @name`,
-);
-
-const hooksdb = {
   translateHook(hook) {
     if (!hook) return null;
     hook.events = hook.events.length > 1 ? hook.events.split(",") : [];
     return hook;
-  },
+  }
   get(hook) {
     return hook
-      ? hooksdb.translateHook(
-          _getHook.get(
+      ? this.translateHook(
+          this._selectHook.get(
             isObject(hook)
               ? { id: hook.id ?? hook.name, name: hook.name ?? hook.id }
               : { id: hook, name: hook },
           ),
         )
-      : _getAllHooks.all().map(hooksdb.translateHook);
-  },
+      : this._selectAllHooks.all().map(this.translateHook);
+  }
   add(...hooks) {
     hooks = hooks.flat();
     var i;
     try {
       for (i = 0; i < hooks.length; i++) {
-        _insertHook.run({
+        this._insertHook.run({
           id: hooks[i].id,
           name: hooks[i].name || smallid(),
           userid: hooks[i].userid,
@@ -113,7 +55,7 @@ const hooksdb = {
         cause: err,
       });
     }
-  },
+  }
   rm(...hooks) {
     hooks = hooks.flat();
     let hook;
@@ -124,7 +66,7 @@ const hooksdb = {
             name: hooks[i].name ?? hooks[i].id,
           }
         : { id: hooks[i], name: hooks[i] };
-      if (_rmHook.run(hook).changes < 1) {
+      if (this._deleteHook.run(hook).changes < 1) {
         throw new CustomError({
           msg: `Failed to delete hook:${hook.id}`,
           hook,
@@ -132,23 +74,84 @@ const hooksdb = {
       }
       log.info(`Deleted hook:${hook.id}`);
     }
-  },
+  }
   drop() {
-    _dropHooksTable.run();
-    log.info("Dropped db:hooks");
-  },
+    this._dropHooksTable.run();
+    log.info("Dropped table:hooks");
+  }
   create() {
-    _createHooksTable.run();
-    log.info("Created db: hooks");
-  },
-  start() {
-    db = new sqlite(`${LIBDIR_PKG}/hooks.db`);
-    log.info("Connected to db:hooks");
-  },
+    this._createHooksTable.run();
+    log.info("Created table:hooks");
+  }
+  async start() {
+    try {
+      await mkdir(this.dbpath, { recursive: true });
+      this.dbpath += "/hooks.db";
+      this.db = new Sqlite(this.dbpath);
+      this._dropHooksTable = this.db.prepare(`
+DROP TABLE IF EXISTS 'hooks'
+`);
+      this._createHooksTable = this.db.prepare(`
+CREATE TABLE IF NOT EXISTS 'hooks' (
+id TEXT NOT NULL,
+name TEXT NOT NULL,
+userid INTEGER,
+workid INTEGER,
+endpoint TEXT,
+events TEXT,
+taskid INTEGER,
+listid INTEGER,
+foldid INTEGER,
+spacid INTEGER,
+status TEXT,
+fail_count INTEGER,
+secret TEXT,
+PRIMARY KEY (id, name)
+)`);
+      this._hasHooksTable = this.db.prepare(`
+SELECT name from sqlite_schema
+WHERE type = 'table'
+AND name = 'hooks'
+`);
+      this.create();
+      this._insertHook = this.db.prepare(`
+INSERT INTO 'hooks'
+VALUES (
+@id,
+@name,
+@userid,
+@workid,
+@endpoint,
+@events,
+@taskid,
+@listid,
+@foldid,
+@spacid,
+@status,
+@fail_count,
+@secret
+)`);
+      this._selectHook = this.db.prepare(`
+SELECT * from 'hooks' WHERE id = @id OR name = @name
+`);
+      this._selectAllHooks = this.db.prepare(`
+SELECT * from 'hooks'
+`);
+      this._deleteHook = this.db.prepare(`
+DELETE from 'hooks' WHERE id = @id OR name = @name
+`);
+      log.info("Connected to db:hooks");
+    } catch (err) {
+      throw new CustomError({
+        msg: "Failed to connect to db:hooks",
+        reason: err,
+      });
+    }
+  }
   stop() {
-    db.close();
+    this.db.close();
     log.info("Closed connection to db:hooks");
-  },
-};
+  }
+}
 
-export { hooksdb };
+export { HookSqliteClient };

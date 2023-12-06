@@ -65,7 +65,8 @@ CLOSED: [2023-11-29 Wed 00:51]
 ** DONE environment variables in envfile should be quoted*
 CLOSED: [2023-11-28 Tue 22:08]
 because they break the build system if they contain special chars
-** At server startup, drop and repopulate the sqlite db with webhooks
+** DONE At server startup, drop and repopulate the sqlite db with webhooks
+CLOSED: [2023-12-06 Wed 21:43]
 * Issues
 ** DONE Emacs fails to add tabs when indenting rules if the file being parsed in not Makefile (for example, Makefile.in)
 CLOSED: [2023-11-28 Tue 21:15]
