@@ -1,6 +1,8 @@
 import sqlite from "better-sqlite3";
 import { LIBDIR_PKG } from "./env.js";
 import { mkdir } from "node:fs/promises";
+import { isObject } from "js_utils/misc";
+import { CustomError } from "./err.js";
 
 await mkdir(LIBDIR_PKG, { recursive: true });
 
@@ -18,19 +20,20 @@ AND name = 'hooks'
 
 const _createHooksTable = db.prepare(`
 CREATE TABLE IF NOT EXISTS 'hooks' (
-id TEXT PRIMARY KEY,
+id TEXT NOT NULL,
+name TEXT NOT NULL,
 userid INTEGER,
-team_id INTEGER,
+workid INTEGER,
 endpoint TEXT,
-client_id TEXT,
 events TEXT,
-task_id INTEGER,
-list_id INTEGER,
-folder_id INTEGER,
-space_id INTEGER,
+taskid INTEGER,
+listid INTEGER,
+foldid INTEGER,
+spacid INTEGER,
 status TEXT,
 fail_count INTEGER,
-secret TEXT
+secret TEXT,
+PRIMARY KEY (id, name)
 )`);
 
 _createHooksTable.run();
@@ -41,59 +44,91 @@ const _insertHook = db.prepare(`
 INSERT INTO 'hooks'
 VALUES (
 @id,
+@name,
 @userid,
-@team_id,
+@workid,
 @endpoint,
-@client_id,
 @events,
-@task_id,
-@list_id,
-@folder_id,
-@space_id,
+@taskid,
+@listid,
+@foldid,
+@spacid,
 @status,
 @fail_count,
 @secret
 )`);
 
-const _getHooks = db.prepare(`SELECT * from 'hooks'`);
+const _getHook = db.prepare(
+  `SELECT * from 'hooks' WHERE id = @id OR name = @name`,
+);
+const _getAllHooks = db.prepare(`SELECT * from 'hooks'`);
+const _rmHook = db.prepare(
+  `DELETE from 'hooks' WHERE id = @id OR name = @name`,
+);
 
 const hooksdb = {
-  get() {
-    return _getHooks.all().map((h) => {
-      h.events = h.events.split(",");
-      return h;
-    });
+  translateHook(hook) {
+    if (!hook) return null;
+    hook.events = hook.events.length > 1 ? hook.events.split(",") : [];
+    return hook;
   },
-  add({
-    id,
-    userid,
-    team_id,
-    endpoint,
-    client_id,
-    events,
-    task_id,
-    list_id,
-    folder_id,
-    space_id,
-    health,
-    secret,
-  } = {}) {
-    _insertHook.run({
-      id,
-      userid,
-      team_id,
-      endpoint,
-      client_id,
-      events: events.join(","),
-      task_id,
-      list_id,
-      folder_id,
-      space_id,
-      status: health.status,
-      fail_count: health.fail_count,
-      secret,
-    });
-    log.info(`Added new hook:${id}`);
+  get(hook) {
+    return hook
+      ? hooksdb.translateHook(
+          _getHook.get(
+            isObject(hook)
+              ? { id: hook.id ?? hook.name, name: hook.name ?? hook.id }
+              : { id: hook, name: hook },
+          ),
+        )
+      : _getAllHooks.all().map(hooksdb.translateHook);
+  },
+  add(...hooks) {
+    let i = 0;
+    try {
+      for (i; i < hooks.length; i++) {
+        _insertHook.run({
+          id: hooks[i].id,
+          name: hooks[i].name,
+          userid: hooks[i].userid,
+          workid: hooks[i].team_id,
+          endpoint: hooks[i].endpoint,
+          events: hooks[i].events.join(","),
+          taskid: hooks[i].task_id,
+          listid: hooks[i].list_id,
+          foldid: hooks[i].folder_id,
+          spacid: hooks[i].space_id,
+          status: hooks[i].health.status,
+          fail_count: hooks[i].health.fail_count,
+          secret: hooks[i].secret,
+        });
+        log.info(`Added new hook:${hooks[i].id}`);
+      }
+    } catch (err) {
+      throw new CustomError({
+        msg: `Failed to add hook:${hooks[i].id}`,
+        hook: hooks[i],
+        cause: err,
+      });
+    }
+  },
+  rm(...hooks) {
+    let hook;
+    for (let i = 0; i < hooks.length; i++) {
+      hook = isObject(hooks[i])
+        ? {
+            id: hooks[i].id ?? hooks[i].name,
+            name: hooks[i].name ?? hooks[i].id,
+          }
+        : { id: hooks[i], name: hooks[i] };
+      if (_rmHook.run(hook).changes < 1) {
+        throw new CustomError({
+          msg: `Failed to delete hook:${hook.id}`,
+          hook,
+        });
+      }
+      log.info(`Deleted hook:${hook.id}`);
+    }
   },
   drop() {
     _dropHooksTable.run();
@@ -110,7 +145,7 @@ const hooksdb = {
   stop() {
     db.close();
     log.info("Closed connection to db:hooks");
-  }
-}
+  },
+};
 
 export { hooksdb };
