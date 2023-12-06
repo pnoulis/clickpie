@@ -3,6 +3,7 @@ import { LIBDIR_PKG } from "./env.js";
 import { mkdir } from "node:fs/promises";
 import { isObject } from "js_utils/misc";
 import { CustomError } from "./err.js";
+import { smallid } from "js_utils/uuid";
 
 await mkdir(LIBDIR_PKG, { recursive: true });
 
@@ -84,12 +85,13 @@ const hooksdb = {
       : _getAllHooks.all().map(hooksdb.translateHook);
   },
   add(...hooks) {
-    let i = 0;
+    hooks = hooks.flat();
+    var i;
     try {
-      for (i; i < hooks.length; i++) {
+      for (i = 0; i < hooks.length; i++) {
         _insertHook.run({
           id: hooks[i].id,
-          name: hooks[i].name,
+          name: hooks[i].name || smallid(),
           userid: hooks[i].userid,
           workid: hooks[i].team_id,
           endpoint: hooks[i].endpoint,
@@ -113,6 +115,7 @@ const hooksdb = {
     }
   },
   rm(...hooks) {
+    hooks = hooks.flat();
     let hook;
     for (let i = 0; i < hooks.length; i++) {
       hook = isObject(hooks[i])
