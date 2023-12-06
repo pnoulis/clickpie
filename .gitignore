@@ -2,6 +2,9 @@ usr/
 assets/
 rclone.conf
 
+# Emacs
+.#*
+
 # Sensitive information
 .secrets
 .env.default
