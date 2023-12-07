@@ -35,7 +35,7 @@ function createApiRoutes(api) {
 
   router.put("/webhooks/:hookname", async function (ctx) {
     const hook = await api.createHook({
-      hookname: ctx.params.hookname,
+      name: ctx.params.name,
       workid: ctx.request.body.workid,
     });
     ctx.body = hook;

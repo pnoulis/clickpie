@@ -1,5 +1,4 @@
 import { Http } from "./Http.js";
-import { ERR_INVALID_ARG_VALUE } from "clickpie-commons/err";
 
 class ClickupHttpClient extends Http {
   constructor({ username, authToken, url } = {}) {

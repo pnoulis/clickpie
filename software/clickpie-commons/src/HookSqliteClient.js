@@ -1,5 +1,4 @@
 import Sqlite from "better-sqlite3";
-import { LIBDIR_PKG } from "./env.js";
 import { mkdir } from "node:fs/promises";
 import { isObject } from "js_utils/misc";
 import { CustomError } from "./err.js";
